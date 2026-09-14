@@ -1,4 +1,5 @@
 import { button, el } from '../lib/dom';
+import { plural } from '../lib/plural';
 import { tzLabel, tzZone } from '../lib/dates';
 import type { Member } from '../backend/types';
 import { avatar } from './shared';
@@ -40,8 +41,14 @@ export function createHeader(game: string, me: Member | null, onSignOut: (() => 
   ]);
 }
 
-/** Обложка пачки: заголовок слева, арт справа. */
-export function createCover(title: string, coverUrl: string | null): HTMLElement {
+export interface CoverView {
+  node: HTMLElement;
+  /** Сколько человек уже отметили себе хотя бы час. */
+  paint(ready: number): void;
+}
+
+/** Обложка пачки: заголовок и размер пачки слева, арт справа. */
+export function createCover(title: string, coverUrl: string | null): CoverView {
   const slot = el('div', {
     style:
       'position:relative; min-height:200px; border:1px solid var(--color-divider);' +
@@ -59,14 +66,27 @@ export function createCover(title: string, coverUrl: string | null): HTMLElement
     }));
   }
 
-  return el('section', {
+  const count = el('span', { style: 'font-size:14px; color:#8b93a1' });
+
+  const node = el('section', {
     style: 'display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:22px; align-items:stretch',
   }, [
     el('div', { style: 'display:flex; flex-direction:column; gap:12px; justify-content:center' }, [
       el('h1', { style: 'margin:0; font-size:40px; line-height:1.08; text-wrap:pretty', text: title }),
+      count,
     ]),
     slot,
   ]);
+
+  return {
+    node,
+    paint(ready) {
+      count.textContent = ready
+        ? `${ready} ${plural(ready, ['человек', 'человека', 'человек'])}` +
+          ` ${plural(ready, ['отметил', 'отметили', 'отметили'])} часы`
+        : 'Часы пока никто не отметил';
+    },
+  };
 }
 
 interface NoticeAction {
