@@ -1,7 +1,7 @@
 import { FALLBACK_PACK, type PackConfig } from '../data/pack';
 import { DEFAULT_PREFS, type WorldPrefs } from '../data/valheim';
 import { buildSeed } from './seed';
-import type { AuthState, Availability, Backend, Member, ModSuggestion, PackSnapshot } from './types';
+import type { AuthState, Availability, Backend, Member, PackSnapshot, Post } from './types';
 
 const KEY = 'pachka.local.v1';
 const ME: Member = { userId: 'me', displayName: 'Ты', avatarUrl: null };
@@ -9,18 +9,24 @@ const ME: Member = { userId: 'me', displayName: 'Ты', avatarUrl: null };
 interface Persisted {
   availability: Availability;
   prefs: WorldPrefs;
-  ownMods: ModSuggestion[];
+  ownPosts: Post[];
   votes: Record<string, boolean>;
 }
 
 function load(): Persisted {
+  const empty: Persisted = { availability: {}, prefs: DEFAULT_PREFS, ownPosts: [], votes: {} };
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { availability: {}, prefs: DEFAULT_PREFS, ownMods: [], votes: {}, ...JSON.parse(raw) };
+    if (!raw) return empty;
+    const saved = JSON.parse(raw) as Partial<Persisted> & { ownMods?: Post[] };
+    // До ленты обсуждения свои записи лежали в ownMods — переносим их.
+    // …а пометки правки тогда не существовало — считаем такие записи нетронутыми.
+    const ownPosts = (saved.ownPosts ?? saved.ownMods ?? []).map((p) => ({ ...p, edited: p.edited === true }));
+    return { ...empty, ...saved, ownPosts };
   } catch {
     // Приватный режим или заблокированное хранилище — работаем в памяти.
   }
-  return { availability: {}, prefs: DEFAULT_PREFS, ownMods: [], votes: {} };
+  return empty;
 }
 
 function save(state: Persisted): void {
@@ -59,12 +65,12 @@ export class LocalBackend implements Backend {
 
   async load(): Promise<PackSnapshot> {
     const seed = buildSeed(this.pack.windowStart, this.pack.windowDays);
-    const mods = [...this.state.ownMods, ...seed.mods].map((m) => {
-      const voted = this.state.votes[m.id];
-      if (voted === undefined) return m;
-      // Голос «за» уже учтён в seed-числе только для своих предложений.
-      const base = m.mine ? m.likes - 1 : m.likes;
-      return { ...m, likes: base + (voted ? 1 : 0), mine: voted };
+    const posts = [...this.state.ownPosts, ...seed.posts].map((p) => {
+      const voted = this.state.votes[p.id];
+      if (voted === undefined) return p;
+      // Голос «за» уже учтён в seed-числе только для своих сообщений.
+      const base = p.mine ? p.likes - 1 : p.likes;
+      return { ...p, likes: base + (voted ? 1 : 0), mine: voted };
     });
 
     return {
@@ -73,7 +79,7 @@ export class LocalBackend implements Backend {
       members: [...seed.members, ME],
       availability: { ...seed.availability, [ME.userId]: this.state.availability },
       prefs: { ...seed.prefs, [ME.userId]: this.state.prefs },
-      mods,
+      posts,
     };
   }
 
@@ -88,8 +94,8 @@ export class LocalBackend implements Backend {
     save(this.state);
   }
 
-  async addMod(text: string): Promise<ModSuggestion> {
-    const mod: ModSuggestion = {
+  async addPost(text: string): Promise<Post> {
+    const post: Post = {
       id: `local-${Date.now()}`,
       authorId: ME.userId,
       authorName: ME.displayName,
@@ -97,14 +103,29 @@ export class LocalBackend implements Backend {
       text,
       likes: 1,
       mine: true,
+      edited: false,
     };
-    this.state.ownMods.unshift(mod);
-    this.state.votes[mod.id] = true;
+    this.state.ownPosts.unshift(post);
+    this.state.votes[post.id] = true;
     save(this.state);
-    return mod;
+    return post;
   }
 
-  async toggleModVote(id: string, next: boolean): Promise<void> {
+  /** Править можно только своё: сид-сообщения демо-ленты не свои. */
+  async editPost(id: string, text: string): Promise<void> {
+    this.state.ownPosts = this.state.ownPosts.map((p) =>
+      p.id === id ? { ...p, text, edited: true } : p,
+    );
+    save(this.state);
+  }
+
+  async deletePost(id: string): Promise<void> {
+    this.state.ownPosts = this.state.ownPosts.filter((p) => p.id !== id);
+    delete this.state.votes[id];
+    save(this.state);
+  }
+
+  async togglePostVote(id: string, next: boolean): Promise<void> {
     this.state.votes[id] = next;
     save(this.state);
   }

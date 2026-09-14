@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient, type User } from '@supabase/supabase
 import { PACK_SLUG, SUPABASE_ANON_KEY, SUPABASE_URL, cleanUrl, inviteFromUrl, redirectTarget } from '../config';
 import type { PackConfig } from '../data/pack';
 import { DEFAULT_PREFS, type WorldPrefs } from '../data/valheim';
-import type { AuthState, Availability, Backend, Member, ModSuggestion, PackSnapshot } from './types';
+import type { AuthState, Availability, Backend, Member, PackSnapshot, Post } from './types';
 
 /** GUID приглашения переживает редирект на Discord через localStorage. */
 const PENDING_INVITE = 'pachka.pendingInvite';
@@ -40,11 +40,12 @@ interface PrefsRow {
   no_map: boolean;
 }
 
-interface ModRow {
+interface PostRow {
   id: string;
   author_id: string;
   text: string;
   created_at: string;
+  edited_at: string | null;
   mod_votes: { user_id: string }[];
 }
 
@@ -209,13 +210,13 @@ export class SupabaseBackend implements Backend {
     const pack = this.requirePack();
     const userId = await this.requireUserId();
 
-    const [membersRes, availRes, prefsRes, modsRes] = await Promise.all([
+    const [membersRes, availRes, prefsRes, postsRes] = await Promise.all([
       this.client.from('pack_members').select('user_id, display_name, avatar_url').eq('pack_id', pack.id),
       this.client.from('availability').select('user_id, day, hours').eq('pack_id', pack.id),
       this.client.from('world_prefs').select('*').eq('pack_id', pack.id),
       this.client
         .from('mod_suggestions')
-        .select('id, author_id, text, created_at, mod_votes(user_id)')
+        .select('id, author_id, text, created_at, edited_at, mod_votes(user_id)')
         .eq('pack_id', pack.id)
         .order('created_at', { ascending: false }),
     ]);
@@ -247,7 +248,7 @@ export class SupabaseBackend implements Backend {
     prefs[userId] ??= DEFAULT_PREFS;
 
     const byId = new Map(members.map((m) => [m.userId, m]));
-    const mods: ModSuggestion[] = ((modsRes.data ?? []) as ModRow[]).map((r) => ({
+    const posts: Post[] = ((postsRes.data ?? []) as PostRow[]).map((r) => ({
       id: r.id,
       authorId: r.author_id,
       authorName: byId.get(r.author_id)?.displayName ?? 'Участник',
@@ -255,9 +256,10 @@ export class SupabaseBackend implements Backend {
       text: r.text,
       likes: r.mod_votes.length,
       mine: r.mod_votes.some((v) => v.user_id === userId),
+      edited: r.edited_at !== null,
     }));
 
-    return { pack, me, members, availability, prefs, mods };
+    return { pack, me, members, availability, prefs, posts };
   }
 
   async saveAvailability(day: string, hours: number[]): Promise<void> {
@@ -294,7 +296,7 @@ export class SupabaseBackend implements Backend {
     );
   }
 
-  async addMod(text: string): Promise<ModSuggestion> {
+  async addPost(text: string): Promise<Post> {
     const pack = this.requirePack();
     const userId = await this.requireUserId();
     const { data, error } = await this.client
@@ -302,15 +304,34 @@ export class SupabaseBackend implements Backend {
       .insert({ pack_id: pack.id, author_id: userId, text })
       .select('id')
       .single();
-    if (error || !data) throw new Error(error?.message ?? 'Не удалось отправить предложение');
+    if (error || !data) throw new Error(error?.message ?? 'Не удалось отправить сообщение');
 
     const id = (data as { id: string }).id;
-    // Автор автоматически поддерживает своё предложение.
+    // Автор автоматически поддерживает своё сообщение.
     await this.client.from('mod_votes').insert({ suggestion_id: id, user_id: userId });
-    return { id, authorId: userId, authorName: 'Ты', authorAvatar: null, text, likes: 1, mine: true };
+    return { id, authorId: userId, authorName: 'Ты', authorAvatar: null, text, likes: 1, mine: true, edited: false };
   }
 
-  async toggleModVote(id: string, next: boolean): Promise<void> {
+  /**
+   * Пометку «отредактировано» ставит триггер в базе, а не клиент: иначе её
+   * можно было бы не проставить, отправив запрос мимо интерфейса.
+   */
+  async editPost(id: string, text: string): Promise<void> {
+    const userId = await this.requireUserId();
+    const { error } = await this.client
+      .from('mod_suggestions')
+      .update({ text })
+      .match({ id, author_id: userId });
+    if (error) throw new Error(error.message);
+  }
+
+  async deletePost(id: string): Promise<void> {
+    const userId = await this.requireUserId();
+    const { error } = await this.client.from('mod_suggestions').delete().match({ id, author_id: userId });
+    if (error) throw new Error(error.message);
+  }
+
+  async togglePostVote(id: string, next: boolean): Promise<void> {
     const userId = await this.requireUserId();
     if (next) await this.client.from('mod_votes').insert({ suggestion_id: id, user_id: userId });
     else await this.client.from('mod_votes').delete().match({ suggestion_id: id, user_id: userId });

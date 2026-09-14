@@ -10,15 +10,22 @@ export interface Member {
 /** Часы доступности участника: { 'YYYY-MM-DD': [20, 21, 22, 23] }. */
 export type Availability = Record<string, number[]>;
 
-export interface ModSuggestion {
+/**
+ * Сообщение в ленте обсуждения: мод, правило, договорённость о старте.
+ * В базе лежит в `mod_suggestions` — таблицу не переименовывали, чтобы
+ * не потерять уже написанное.
+ */
+export interface Post {
   id: string;
   authorId: string;
   authorName: string;
   authorAvatar: string | null;
   text: string;
   likes: number;
-  /** Текущий пользователь поддержал это предложение. */
+  /** Текущий пользователь поддержал это сообщение. */
   mine: boolean;
+  /** Автор правил текст после отправки. Когда именно — не показываем. */
+  edited: boolean;
 }
 
 /** Всё, что нужно странице: конфиг пачки, участники и их ответы. */
@@ -28,7 +35,7 @@ export interface PackSnapshot {
   members: Member[];
   availability: Record<string, Availability>;
   prefs: Record<string, WorldPrefs>;
-  mods: ModSuggestion[];
+  posts: Post[];
 }
 
 export type AuthState =
@@ -60,6 +67,9 @@ export interface Backend {
   load(): Promise<PackSnapshot>;
   saveAvailability(day: string, hours: number[]): Promise<void>;
   savePrefs(prefs: WorldPrefs): Promise<void>;
-  addMod(text: string): Promise<ModSuggestion>;
-  toggleModVote(id: string, next: boolean): Promise<void>;
+  addPost(text: string): Promise<Post>;
+  /** Правка своего сообщения; чужие закрыты и в интерфейсе, и в RLS. */
+  editPost(id: string, text: string): Promise<void>;
+  deletePost(id: string): Promise<void>;
+  togglePostVote(id: string, next: boolean): Promise<void>;
 }
