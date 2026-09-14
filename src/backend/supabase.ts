@@ -87,6 +87,8 @@ export class SupabaseBackend implements Backend {
   private client: SupabaseClient;
   private pack: PackConfig | null = null;
   private invite: string | null = null;
+  /** Кэш id участника: см. requireUserId(). */
+  private userId: string | null = null;
 
   constructor() {
     this.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -138,8 +140,11 @@ export class SupabaseBackend implements Backend {
   }
 
   async getAuthState(): Promise<AuthState> {
+    // Единственный за загрузку поход на /auth/v1/user: он проверяет токен
+    // на сервере и приносит свежий профиль Discord.
     const { data } = await this.client.auth.getUser();
     if (!data.user) return { status: 'anonymous' };
+    this.userId = data.user.id;
     const member = memberFromUser(data.user);
 
     let joinError: string | null = null;
@@ -154,8 +159,12 @@ export class SupabaseBackend implements Backend {
     const pack = await this.resolvePack();
     if (!pack) return { status: 'not-a-member', member, reason: joinError };
     this.pack = pack;
-    // Имя и аватар в Discord могли смениться — обновляем, не блокируя загрузку.
-    void this.client.rpc('sync_profile');
+    // Имя и аватар в Discord могли смениться — обновляем, не блокируя
+    // загрузку. `.then()` обязателен: билдер postgrest ленивый и без него
+    // запрос вообще не уходит.
+    void this.client.rpc('sync_profile').then(undefined, () => {
+      // Профиль не обновился — не повод ронять страницу.
+    });
     return { status: 'authenticated', member };
   }
 
@@ -186,6 +195,8 @@ export class SupabaseBackend implements Backend {
   }
 
   async signOut(): Promise<void> {
+    this.userId = null;
+    this.pack = null;
     await this.client.auth.signOut();
   }
 
@@ -200,10 +211,19 @@ export class SupabaseBackend implements Backend {
     return this.pack;
   }
 
+  /**
+   * Свой id. `getUser()` ходит в сеть на каждый вызов, а он нужен в каждой
+   * записи — поэтому id берём из проверенного при входе кэша, а запасной
+   * путь читает локальную сессию. Подлинность токена всё равно проверяет
+   * база: в RLS-политиках стоит `auth.uid()`, а не то, что прислал клиент.
+   */
   private async requireUserId(): Promise<string> {
-    const { data } = await this.client.auth.getUser();
-    if (!data.user) throw new Error('Нет сессии');
-    return data.user.id;
+    if (this.userId) return this.userId;
+    const { data } = await this.client.auth.getSession();
+    const id = data.session?.user.id;
+    if (!id) throw new Error('Нет сессии');
+    this.userId = id;
+    return id;
   }
 
   async load(): Promise<PackSnapshot> {
