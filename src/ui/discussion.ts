@@ -15,6 +15,9 @@ export interface DiscussionView {
   paint(posts: Post[]): void;
 }
 
+/** Столько же стоит в `check` на mod_suggestions.text — длиннее база не примет. */
+const MAX_LEN = 500;
+
 const FIELD_STYLE =
   'width:100%; box-sizing:border-box; resize:vertical; padding:12px 14px;' +
   ' border-radius:var(--radius-sm); border:1px solid var(--color-divider);' +
@@ -44,6 +47,7 @@ export function createDiscussionPanel(meId: string, handlers: DiscussionHandlers
     rows: 3,
     placeholder: 'Сообщение или предложение по моду',
     style: FIELD_STYLE,
+    attrs: { maxlength: String(MAX_LEN) },
   });
 
   const send = button({ class: 'btn btn-primary', style: 'margin-left:auto; height:38px', text: 'Отправить' });
@@ -91,7 +95,7 @@ export function createDiscussionPanel(meId: string, handlers: DiscussionHandlers
   function startEdit(post: Post): void {
     confirming = null;
     editing = post.id;
-    editor = el('textarea', { rows: 3, style: FIELD_STYLE });
+    editor = el('textarea', { rows: 3, style: FIELD_STYLE, attrs: { maxlength: String(MAX_LEN) } });
     editor.value = post.text;
     editor.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') stopEdit();

@@ -26,7 +26,7 @@ exception when insufficient_privilege then raise notice 'OK: anon к packs не 
 reset role;
 
 \echo '--- 2. alice входит по приглашению ---'
-update auth._ctx set uid=:'alice', jwt='{"user_metadata":{"full_name":"Алиса","avatar_url":"http://a/x.png"}}';
+update auth._ctx set uid=:'alice', jwt='{"user_metadata":{"full_name":"Алиса","avatar_url":"https://cdn.discordapp.com/avatars/1/x.png"}}';
 set role authenticated;
 select 'join:' || (public.join_pack(:'inv') is not null) as r;
 select 'alice_sees_packs:' || count(*) from public.packs;
@@ -154,4 +154,17 @@ set role authenticated;
 delete from public.mod_suggestions where author_id=:'alice';
 select 'after_delete:' || (select count(*) from public.mod_suggestions) || '/'
   || (select count(*) from public.mod_votes);
+reset role;
+
+\echo '--- 10. аватар только с CDN Discord ---'
+update auth._ctx set uid=:'alice',
+  jwt='{"user_metadata":{"full_name":"Алиса","avatar_url":"https://evil.example/pixel.png"}}';
+set role authenticated;
+select 'jwt_avatar_dropped:' || coalesce(public.jwt_avatar_url(), 'нет');
+select 'join_with_foreign_avatar:' || (public.join_pack(:'inv') is not null);
+select 'stored_avatar:' || coalesce((select avatar_url from public.pack_members where user_id=:'alice'), 'нет');
+do $$ begin
+  update public.pack_members set avatar_url='https://evil.example/pixel.png' where user_id=auth.uid();
+  raise notice 'ПРОВАЛ: чужой хост в аватаре принят';
+exception when check_violation then raise notice 'OK: чужой хост в аватаре отбит'; end $$;
 reset role;

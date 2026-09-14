@@ -32,6 +32,12 @@ create table if not exists public.pack_members (
   primary key (pack_id, user_id)
 );
 
+-- Свою строку участник правит напрямую (members_update_own), поэтому адрес
+-- аватара ограничен не только в jwt_avatar_url(), но и здесь.
+alter table public.pack_members drop constraint if exists pack_members_avatar_host;
+alter table public.pack_members add constraint pack_members_avatar_host
+  check (avatar_url is null or starts_with(avatar_url, 'https://cdn.discordapp.com/'));
+
 create table if not exists public.availability (
   pack_id     uuid not null,
   user_id     uuid not null,
@@ -70,9 +76,6 @@ create table if not exists public.mod_suggestions (
   -- Время правки нужно только как флаг «отредактировано»: дату не показываем.
   edited_at   timestamptz
 );
-
--- Для баз, созданных до появления правки сообщений.
-alter table public.mod_suggestions add column if not exists edited_at timestamptz;
 
 create table if not exists public.mod_votes (
   suggestion_id uuid not null references public.mod_suggestions(id) on delete cascade,
@@ -114,12 +117,16 @@ as $$
   );
 $$;
 
+-- Аватар берём только с CDN Discord. `user_metadata` участник переписывает
+-- сам (GoTrue отдаёт его на запись владельцу токена), а картинку по этому
+-- адресу грузит браузер каждого в пачке — чужой хост там ни к чему.
 create or replace function public.jwt_avatar_url()
 returns text
 language sql
 stable
 as $$
-  select nullif(auth.jwt() -> 'user_metadata' ->> 'avatar_url', '');
+  select case when starts_with(u, 'https://cdn.discordapp.com/') then u end
+  from (select nullif(auth.jwt() -> 'user_metadata' ->> 'avatar_url', '') as u) t;
 $$;
 
 -- Пометку правки ставит база, а не клиент: запрос мимо интерфейса иначе
