@@ -82,9 +82,8 @@ export function createCover(title: string, coverUrl: string | null): CoverView {
     node,
     paint(ready) {
       count.textContent = ready
-        ? `${ready} ${plural(ready, ['человек', 'человека', 'человек'])}` +
-          ` ${plural(ready, ['отметил', 'отметили', 'отметили'])} часы`
-        : 'Часы пока никто не отметил';
+        ? `${ready} ${plural(ready, ['человек', 'человека', 'человек'])}`
+        : 'Пока никого';
     },
   };
 }

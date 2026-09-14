@@ -56,10 +56,7 @@ export function createModsPanel(handlers: ModsHandlers): ModsView {
     fogRule(),
     el('div', { style: 'display:flex; flex-direction:column; gap:10px' }, [
       input,
-      el('div', { style: 'display:flex; align-items:center; gap:12px; flex-wrap:wrap' }, [
-        el('span', { style: 'font-size:11px; color:#7b8390', text: 'Один мод — одно предложение. Пачка поддержит голосами.' }),
-        send,
-      ]),
+      el('div', { style: 'display:flex; align-items:center; gap:12px; flex-wrap:wrap' }, [send]),
     ]),
     list,
   ]);
