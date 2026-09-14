@@ -67,6 +67,18 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
     return { counts, mine, total: snapshot.members.length };
   }
 
+  /**
+   * Размер пачки считаем не по списку участников, а по тем, кто отметил себе
+   * хотя бы час: вступивший по ссылке и не заполнивший опрос ещё не игрок.
+   */
+  function ready(): number {
+    return snapshot.members.filter((m) => {
+      const own = m.userId === snapshot.me.userId;
+      const marked = own ? state.days : snapshot.availability[m.userId] ?? {};
+      return Object.values(marked).some((hours) => hours.length > 0);
+    }).length;
+  }
+
   function tallies(): Record<keyof WorldPrefs, VoteTally> {
     const out = {} as Record<keyof WorldPrefs, VoteTally>;
     for (const key of PREF_KEYS) out[key] = {};
@@ -82,6 +94,8 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
   }
 
   // ——— панели ———
+
+  const cover = createCover(snapshot.pack.title, snapshot.pack.coverUrl);
 
   const heatmap = createHeatmap(days);
 
@@ -181,18 +195,17 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
     availability.paint({ days: state.days, active: state.active });
     const { counts, mine, total } = heat();
     heatmap.paint(counts, mine, total);
+    cover.paint(ready());
   }
 
   // ——— сборка страницы ———
 
   root.append(
     createHeader(snapshot.pack.game, snapshot.me, backend.needsAuth ? () => void backend.signOut().then(() => location.reload()) : null),
-    el('main', {
-      style: 'max-width:1120px; margin:0 auto; padding:26px 26px 60px; display:flex; flex-direction:column; gap:26px',
-    }, [
-      createCover(snapshot.pack.title, snapshot.pack.coverUrl),
+    el('main', { class: 'page' }, [
+      cover.node,
       heatmap.node,
-      el('h2', { style: 'margin:8px 0 0; font-size:32px; line-height:1.1', text: 'Опрос / Обсуждение' }),
+      el('h2', { class: 'section-title', text: 'Опрос / Обсуждение' }),
       availability.node,
       sweat.node,
       mods.node,

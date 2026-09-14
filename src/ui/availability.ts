@@ -1,7 +1,7 @@
 import { shortDate, WD, MON, type DayCell } from '../lib/dates';
 import { button, el } from '../lib/dom';
 import { plural } from '../lib/plural';
-import { ACCENT, fogRule, kicker, panelHeading, panelSub, PANEL_STYLE } from './shared';
+import { ACCENT, fogRule, kicker, panelHeading, panelSub, PANEL_CLASS } from './shared';
 
 export interface AvailabilityHandlers {
   /** Клик по дню: отметить с часами по умолчанию либо снять, если день уже активен. */
@@ -62,7 +62,7 @@ export function createAvailability(
 
   const headRow = el(
     'div',
-    { style: 'display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:6px' },
+    { class: 'week-row' },
     WD.map((w) =>
       el('span', { style: 'font-size:11px; letter-spacing:0.08em; color:#7b8390; text-align:center; padding-bottom:2px', text: w }),
     ),
@@ -71,22 +71,22 @@ export function createAvailability(
   // Календарь: недели с понедельника, первая добита пустыми ячейками.
   const dayNodes: DayNode[] = [];
   const weeksWrap = el('div', { style: 'display:flex; flex-direction:column; gap:6px' });
-  const weekStyle = 'display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:6px';
-  const spacer = () => el('div', { style: 'visibility:hidden; min-height:62px' });
+  const spacer = () => el('div', { class: 'day-spacer', style: 'visibility:hidden' });
 
-  let week = el('div', { style: weekStyle });
+  let week = el('div', { class: 'week-row' });
   let col = 0;
   for (let i = 0; i < (days[0]?.dow ?? 0); i++, col++) week.append(spacer());
 
   for (const day of days) {
     const num = el('span', { style: 'font-family:var(--font-heading); font-size:15px' });
-    const sub = el('span', { style: 'font-size:10px; letter-spacing:0.06em' });
+    const sub = el('span', { class: 'day-sub' });
     const dot = el('span', { style: 'position:absolute; right:8px; top:8px; width:6px; height:6px; border-radius:50%' });
     const cell = button(
       {
+        class: 'day-cell',
         style:
           'position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:4px;' +
-          ' padding:8px 9px 9px; min-height:62px; cursor:pointer; font:inherit; text-align:left;' +
+          ' cursor:pointer; font:inherit; text-align:left;' +
           ' border-radius:var(--radius-sm); border:1px solid var(--color-divider);' +
           ' transition:background 120ms, border-color 120ms',
         on: { click: () => handlers.pickDay(day.key) },
@@ -97,7 +97,7 @@ export function createAvailability(
     week.append(cell);
     if (++col === 7) {
       weeksWrap.append(week);
-      week = el('div', { style: weekStyle });
+      week = el('div', { class: 'week-row' });
       col = 0;
     }
   }
@@ -110,7 +110,7 @@ export function createAvailability(
   const activeTitle = el('span', { style: 'font-family:var(--font-heading); font-size:16px' });
   const activeHint = el('span', { style: 'font-size:12px; color:#8b93a1' });
   const hourNodes: HTMLButtonElement[] = [];
-  const hourGrid = el('div', { style: 'display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); gap:4px' });
+  const hourGrid = el('div', { class: 'hours' });
 
   /** Режим протяжки: true — красим, false — стираем, null — протяжки нет. */
   let drag: boolean | null = null;
@@ -174,12 +174,12 @@ export function createAvailability(
       hourGrid,
       el('span', {
         style: 'font-size:11px; color:#7b8390',
-        text: 'Тяните мышью по часам. Повторный клик по отмеченному дню снимает его целиком.',
+        text: 'Мышью можно протянуть по часам. Повторный клик по отмеченному дню снимает его целиком.',
       }),
     ],
   );
 
-  const node = el('section', { style: PANEL_STYLE }, [
+  const node = el('section', { class: PANEL_CLASS }, [
     el('div', { style: 'display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap' }, [
       el('div', { style: 'margin-right:auto' }, [
         kicker('Первое'),

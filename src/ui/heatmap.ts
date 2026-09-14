@@ -1,6 +1,6 @@
 import { blockLabel, MON, type DayCell } from '../lib/dates';
 import { el } from '../lib/dom';
-import { fogRule, PANEL_STYLE } from './shared';
+import { fogRule, PANEL_CLASS } from './shared';
 
 const ROW_STYLE = 'display:grid; grid-template-columns:78px repeat(var(--cols), minmax(20px,1fr)); gap:3px; min-width:790px';
 
@@ -80,7 +80,7 @@ export function createHeatmap(days: DayCell[]): HeatmapView {
     ]),
   ]);
 
-  const node = el('section', { style: PANEL_STYLE }, [
+  const node = el('section', { class: PANEL_CLASS }, [
     el('div', { style: 'display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap' }, [
       el('div', { style: 'margin-right:auto' }, [
         el('h2', { style: 'margin:0 0 2px; font-size:24px', text: 'Когда сходится пачка' }),

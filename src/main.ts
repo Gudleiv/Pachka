@@ -13,15 +13,16 @@ if (!root) throw new Error('Не найден контейнер #app');
 function screen(...nodes: Node[]): void {
   root!.replaceChildren(
     createHeader(FALLBACK_PACK.game, null, null),
-    el('main', { style: 'max-width:1120px; margin:0 auto; padding:60px 26px' }, nodes),
+    el('main', { class: 'page page-notice' }, nodes),
   );
 }
 
 /** Полоса-предупреждение о демо-режиме поверх страницы. */
 function demoBanner(): HTMLElement {
   return el('div', {
+    class: 'banner',
     style:
-      'padding:10px 26px; font-size:12px; color:#dcb98a; text-align:center;' +
+      'font-size:12px; color:#dcb98a; text-align:center;' +
       ' border-bottom:1px solid var(--color-divider); background:rgba(200,160,106,0.10)',
     text: 'Демо-режим: ответы пачки сгенерированы, твои — сохраняются только в этом браузере. Вход через Discord появится после настройки Supabase.',
   });

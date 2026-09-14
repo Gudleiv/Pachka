@@ -1,7 +1,7 @@
 import { button, clear, el } from '../lib/dom';
 import { plural } from '../lib/plural';
 import type { ModSuggestion } from '../backend/types';
-import { avatar, fogRule, kicker, panelHeading, panelSub, PANEL_STYLE } from './shared';
+import { avatar, fogRule, kicker, panelHeading, PANEL_CLASS } from './shared';
 
 export interface ModsHandlers {
   submit(text: string): void;
@@ -18,7 +18,7 @@ export function createModsPanel(handlers: ModsHandlers): ModsView {
 
   const input = el('textarea', {
     rows: 3,
-    placeholder: 'Название мода и зачем он нужен вечером',
+    placeholder: 'Название мода и зачем он нужен',
     style:
       'width:100%; box-sizing:border-box; resize:vertical; padding:12px 14px;' +
       ' border-radius:var(--radius-sm); border:1px solid var(--color-divider);' +
@@ -45,22 +45,18 @@ export function createModsPanel(handlers: ModsHandlers): ModsView {
 
   const list = el('div', { style: 'display:flex; flex-direction:column; gap:8px' });
 
-  const node = el('section', { style: PANEL_STYLE }, [
+  const node = el('section', { class: PANEL_CLASS }, [
     el('div', { style: 'display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap' }, [
       el('div', { style: 'margin-right:auto' }, [
         kicker('Третье'),
         panelHeading('Предложения по модификациям'),
-        panelSub('Что поставить на сервер. Ставим то, что собрало больше голосов пачки.'),
       ]),
       count,
     ]),
     fogRule(),
     el('div', { style: 'display:flex; flex-direction:column; gap:10px' }, [
       input,
-      el('div', { style: 'display:flex; align-items:center; gap:12px; flex-wrap:wrap' }, [
-        el('span', { style: 'font-size:11px; color:#7b8390', text: 'Один мод — одно предложение. Пачка поддержит голосами.' }),
-        send,
-      ]),
+      el('div', { style: 'display:flex; align-items:center; gap:12px; flex-wrap:wrap' }, [send]),
     ]),
     list,
   ]);
@@ -90,13 +86,15 @@ export function createModsPanel(handlers: ModsHandlers): ModsView {
           'div',
           {
             style:
-              'display:flex; align-items:flex-start; gap:12px; padding:12px 14px;' +
+              'display:flex; align-items:flex-start; flex-wrap:wrap; gap:12px; padding:12px 14px;' +
               ' border-radius:var(--radius-sm); border:1px solid var(--color-divider);' +
               ' background:rgba(255,255,255,0.025)',
           },
           [
             avatar(m.authorName, m.authorAvatar),
-            el('span', { style: 'display:flex; flex-direction:column; gap:3px; min-width:0' }, [
+            // На телефоне кнопке голоса не хватает места в строке — она
+            // переносится вниз, а текст занимает всю ширину карточки.
+            el('span', { style: 'display:flex; flex-direction:column; gap:3px; min-width:0; flex:1 1 200px' }, [
               el('span', { style: 'font-size:12px; color:var(--color-accent-300)', text: m.authorName }),
               el('span', { style: 'font-size:14px; line-height:1.5; color:#c3c8d2; text-wrap:pretty', text: m.text }),
             ]),
