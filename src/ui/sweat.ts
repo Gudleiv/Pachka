@@ -174,7 +174,7 @@ export function createSweatPanel(handlers: SweatHandlers): SweatView {
   const sweatNote = el('span', { style: 'font-size:12px; color:#8b93a1; text-wrap:pretty' });
 
   const node = el('section', { style: PANEL_STYLE.replace('gap:14px', 'gap:16px') }, [
-    el('div', {}, [kicker('Второе'), panelHeading('Селектор душноты'), panelSub('Твои пожелания по миру. Голоса пачки складываются — правила ставим по большинству.')]),
+    el('div', {}, [kicker('Второе'), panelHeading('Селектор душноты'), panelSub('Твои пожелания по миру.')]),
     fogRule(),
     el('div', { style: 'display:flex; flex-direction:column; gap:8px' }, [
       el('span', { style: 'font-size:11px; letter-spacing:0.16em; color:#7b8390; text-transform:uppercase', text: 'Готовые режимы сложности' }),

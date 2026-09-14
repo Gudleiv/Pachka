@@ -17,7 +17,8 @@ export const FALLBACK_PACK: PackConfig = {
   id: 'valheim-demo',
   title: 'Valheim',
   game: 'Valheim',
-  coverUrl: null,
+  coverUrl:
+    'https://img2.storyblok.com/fit-in/1920x1080/f/157036/3200x1834/1391ca065a/valheim-campfire.png',
   windowStart: '2026-09-18',
   windowDays: 30,
 };

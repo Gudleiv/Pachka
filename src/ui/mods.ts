@@ -1,7 +1,7 @@
 import { button, clear, el } from '../lib/dom';
 import { plural } from '../lib/plural';
 import type { ModSuggestion } from '../backend/types';
-import { avatar, fogRule, kicker, panelHeading, panelSub, PANEL_STYLE } from './shared';
+import { avatar, fogRule, kicker, panelHeading, PANEL_STYLE } from './shared';
 
 export interface ModsHandlers {
   submit(text: string): void;
@@ -18,7 +18,7 @@ export function createModsPanel(handlers: ModsHandlers): ModsView {
 
   const input = el('textarea', {
     rows: 3,
-    placeholder: 'Название мода и зачем он нужен вечером',
+    placeholder: 'Название мода и зачем он нужен',
     style:
       'width:100%; box-sizing:border-box; resize:vertical; padding:12px 14px;' +
       ' border-radius:var(--radius-sm); border:1px solid var(--color-divider);' +
@@ -50,7 +50,6 @@ export function createModsPanel(handlers: ModsHandlers): ModsView {
       el('div', { style: 'margin-right:auto' }, [
         kicker('Третье'),
         panelHeading('Предложения по модификациям'),
-        panelSub('Что поставить на сервер. Ставим то, что собрало больше голосов пачки.'),
       ]),
       count,
     ]),
