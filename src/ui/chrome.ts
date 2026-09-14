@@ -69,14 +69,21 @@ export function createCover(title: string, coverUrl: string | null): HTMLElement
   ]);
 }
 
+interface NoticeAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface NoticeOpts {
   title: string;
   text: string;
-  action?: { label: string; onClick: () => void };
+  action?: NoticeAction;
+  /** Второстепенный выход из экрана: «Выйти» рядом с «Повторить». */
+  secondary?: NoticeAction;
 }
 
 /** Экран входа / ошибки — та же панель, что и остальные блоки страницы. */
-export function createNotice({ title, text, action }: NoticeOpts): HTMLElement {
+export function createNotice({ title, text, action, secondary }: NoticeOpts): HTMLElement {
   const box = el('section', {
     style:
       'display:flex; flex-direction:column; align-items:flex-start; gap:14px; padding:26px;' +
@@ -87,10 +94,19 @@ export function createNotice({ title, text, action }: NoticeOpts): HTMLElement {
     el('p', { style: 'margin:0; font-size:14px; line-height:1.6; color:#8b93a1; text-wrap:pretty', text }),
   ]);
 
-  if (action) {
-    box.append(
-      button({ class: 'btn btn-primary', style: 'height:40px; padding-inline:18px', text: action.label, on: { click: action.onClick } }),
-    );
+  if (action || secondary) {
+    const row = el('div', { style: 'display:flex; flex-wrap:wrap; gap:10px' });
+    if (action) {
+      row.append(
+        button({ class: 'btn btn-primary', style: 'height:40px; padding-inline:18px', text: action.label, on: { click: action.onClick } }),
+      );
+    }
+    if (secondary) {
+      row.append(
+        button({ class: 'btn', style: 'height:40px; padding-inline:18px', text: secondary.label, on: { click: secondary.onClick } }),
+      );
+    }
+    box.append(row);
   }
   return box;
 }

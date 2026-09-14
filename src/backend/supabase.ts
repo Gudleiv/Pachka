@@ -85,6 +85,7 @@ export class SupabaseBackend implements Backend {
 
   private client: SupabaseClient;
   private pack: PackConfig | null = null;
+  private invite: string | null = null;
 
   constructor() {
     this.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -100,6 +101,7 @@ export class SupabaseBackend implements Backend {
   async init(): Promise<void> {
     const invite = inviteFromUrl();
     if (invite) {
+      this.invite = invite;
       try {
         localStorage.setItem(PENDING_INVITE, invite);
       } catch {
@@ -111,7 +113,13 @@ export class SupabaseBackend implements Backend {
     if (location.search || location.hash) cleanUrl();
   }
 
-  private pendingInvite(): string | null {
+  /**
+   * Приглашение переживает уход на Discord: в `redirectTo` можно передать
+   * только адрес из белого списка Supabase, без хеша, поэтому GUID ждёт
+   * возвращения в localStorage.
+   */
+  pendingInvite(): string | null {
+    if (this.invite) return this.invite;
     try {
       return localStorage.getItem(PENDING_INVITE);
     } catch {
@@ -120,6 +128,7 @@ export class SupabaseBackend implements Backend {
   }
 
   private clearPendingInvite(): void {
+    this.invite = null;
     try {
       localStorage.removeItem(PENDING_INVITE);
     } catch {
@@ -132,15 +141,17 @@ export class SupabaseBackend implements Backend {
     if (!data.user) return { status: 'anonymous' };
     const member = memberFromUser(data.user);
 
+    let joinError: string | null = null;
     const invite = this.pendingInvite();
     if (invite) {
       // Вступление идемпотентно: повторный заход по ссылке ничего не ломает.
       const { error } = await this.client.rpc('join_pack', { p_invite: invite });
-      if (!error) this.clearPendingInvite();
+      if (error) joinError = error.message;
+      else this.clearPendingInvite();
     }
 
     const pack = await this.resolvePack();
-    if (!pack) return { status: 'not-a-member', member };
+    if (!pack) return { status: 'not-a-member', member, reason: joinError };
     this.pack = pack;
     // Имя и аватар в Discord могли смениться — обновляем, не блокируя загрузку.
     void this.client.rpc('sync_profile');
@@ -167,7 +178,9 @@ export class SupabaseBackend implements Backend {
   async signIn(): Promise<void> {
     await this.client.auth.signInWithOAuth({
       provider: 'discord',
-      options: { redirectTo: redirectTarget(), scopes: 'identify' },
+      // `scopes` заменяет умолчание Supabase целиком, а не дополняет его:
+      // без `email` GoTrue не создаёт пользователя Discord и рвёт вход.
+      options: { redirectTo: redirectTarget(), scopes: 'identify email' },
     });
   }
 

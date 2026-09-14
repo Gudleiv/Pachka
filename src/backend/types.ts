@@ -34,8 +34,12 @@ export interface PackSnapshot {
 export type AuthState =
   | { status: 'anonymous' }
   | { status: 'authenticated'; member: Member }
-  /** Вошёл в Discord, но ещё не состоит в этой пачке — нужен GUID приглашения. */
-  | { status: 'not-a-member'; member: Member };
+  /**
+   * Вошёл в Discord, но ещё не состоит в этой пачке. `reason` заполнен, если
+   * приглашение было, но вступить по нему не вышло — иначе причина отказа
+   * теряется и экран выглядит так, будто ссылки не было вовсе.
+   */
+  | { status: 'not-a-member'; member: Member; reason: string | null };
 
 export interface Backend {
   readonly kind: 'local' | 'supabase';
@@ -50,6 +54,8 @@ export interface Backend {
   signOut(): Promise<void>;
   /** Вступление в пачку по GUID приглашения. */
   joinByInvite(inviteCode: string): Promise<void>;
+  /** Приглашение, распознанное при загрузке или отложенное до входа. */
+  pendingInvite(): string | null;
 
   load(): Promise<PackSnapshot>;
   saveAvailability(day: string, hours: number[]): Promise<void>;

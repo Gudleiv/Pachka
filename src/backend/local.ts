@@ -52,6 +52,10 @@ export class LocalBackend implements Backend {
   async signIn(): Promise<void> {}
   async signOut(): Promise<void> {}
   async joinByInvite(): Promise<void> {}
+  /** В демо-режиме приглашений нет: пачка одна и она локальная. */
+  pendingInvite(): string | null {
+    return null;
+  }
 
   async load(): Promise<PackSnapshot> {
     const seed = buildSeed(this.pack.windowStart, this.pack.windowDays);
