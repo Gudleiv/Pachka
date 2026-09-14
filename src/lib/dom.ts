@@ -1,6 +1,10 @@
 /**
  * Минимальный хелпер разметки. Стили задаются строкой, чтобы значения
  * из дизайн-макета переносились дословно, без промежуточного слоя.
+ *
+ * Текст ставится только через `text` — это `textContent`. Разметкой строку
+ * не вставить, и добавлять такую возможность не нужно: всё, что печатают
+ * участники, попадает на страницу через этот хелпер.
  */
 type Child = Node | string | null | undefined | false;
 
@@ -12,7 +16,6 @@ export interface ElOpts {
   type?: 'button' | 'submit' | 'reset';
   rows?: number;
   placeholder?: string;
-  html?: string;
   attrs?: Record<string, string>;
   on?: Partial<Record<keyof HTMLElementEventMap, (e: never) => void>>;
 }
@@ -27,7 +30,6 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   if (opts.style) node.setAttribute('style', opts.style);
   if (opts.title) node.title = opts.title;
   if (opts.text !== undefined) node.textContent = opts.text;
-  if (opts.html !== undefined) node.innerHTML = opts.html;
   if (opts.type && node instanceof HTMLButtonElement) node.type = opts.type;
   if (opts.rows !== undefined && node instanceof HTMLTextAreaElement) node.rows = opts.rows;
   if (opts.placeholder !== undefined && node instanceof HTMLTextAreaElement) node.placeholder = opts.placeholder;

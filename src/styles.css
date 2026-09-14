@@ -34,7 +34,6 @@ body {
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: 14px;
-  user-select: none;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -70,11 +69,15 @@ a:hover { color: var(--color-accent-100); }
 .btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
 
-/* Тач: без этого браузер ждёт второй тап, прежде чем отдать клик. */
-button { touch-action: manipulation; }
+/* Тач: без этого браузер ждёт второй тап, прежде чем отдать клик.
+   Выделение запрещено только на кнопках: протяжка по часам иначе тянет
+   за собой синюю полосу. Текст страницы выделяется как обычно. */
+button {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
 
-/* Поле ввода предложений — единственный текстовый инпут страницы. */
-textarea { user-select: text; }
 textarea:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 /* — Раскладка —
