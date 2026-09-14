@@ -27,6 +27,8 @@
 
 body {
   margin: 0;
+  /* Айфон иначе раздувает шрифт в альбомной ориентации. */
+  -webkit-text-size-adjust: 100%;
   min-height: 100vh;
   background: radial-gradient(120% 80% at 18% -10%, #1d2431 0%, #12151b 55%, #0e1014 100%);
   color: var(--color-text);
@@ -68,6 +70,73 @@ a:hover { color: var(--color-accent-100); }
 .btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
 
+/* Тач: без этого браузер ждёт второй тап, прежде чем отдать клик. */
+button { touch-action: manipulation; }
+
 /* Поле ввода предложений — единственный текстовый инпут страницы. */
 textarea { user-select: text; }
 textarea:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* — Раскладка —
+   В классы вынесено только то, что меняется на узких экранах; остальные
+   стили по-прежнему живут инлайном рядом с разметкой. */
+.topbar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 14px 26px;
+  border-bottom: 1px solid var(--color-divider);
+  background: rgba(14, 16, 21, 0.7);
+}
+
+.page {
+  max-width: 1120px; margin: 0 auto;
+  padding: 26px 26px 60px;
+  display: flex; flex-direction: column; gap: 26px;
+}
+.page-notice { padding: 60px 26px; }
+.banner { padding: 10px 26px; }
+
+.panel {
+  display: flex; flex-direction: column; gap: 14px; padding: 22px;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(26, 30, 38, 0.9), rgba(18, 21, 27, 0.9));
+}
+.panel-sweat { gap: 16px; }
+
+.cover {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 22px; align-items: stretch;
+}
+.cover-art {
+  position: relative; min-height: 200px; overflow: hidden;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  background: #0f1217;
+}
+.cover-title { margin: 0; font-size: 40px; line-height: 1.08; text-wrap: pretty; }
+.section-title { margin: 8px 0 0; font-size: 32px; line-height: 1.1; }
+
+.week-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.day-cell { padding: 8px 9px 9px; min-height: 62px; }
+.day-spacer { min-height: 62px; }
+.day-sub { font-size: 10px; letter-spacing: 0.06em; white-space: nowrap; }
+.hours { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+
+/* Телефон: полей меньше, обложка и календарь перестраиваются, сутки
+   раскладываются в четыре ряда — по часу на палец, а не на пиксель. */
+@media (max-width: 760px) {
+  .topbar { gap: 10px; padding: 12px 14px; }
+  .page { padding: 16px 14px 40px; gap: 18px; }
+  .page-notice { padding: 28px 14px 40px; }
+  .banner { padding: 9px 14px; }
+  .panel { padding: 16px 13px; }
+  .cover { grid-template-columns: 1fr; gap: 14px; }
+  /* Высота фиксированная: в одну колонку арт иначе растягивается на весь
+     экран по своим пропорциям и выдавливает страницу вниз. */
+  .cover-art { min-height: 0; height: 190px; order: -1; }
+  .cover-title { font-size: 30px; }
+  .section-title { font-size: 24px; }
+  .week-row { gap: 4px; }
+  .day-cell { padding: 6px 4px 7px; min-height: 54px; }
+  .day-spacer { min-height: 54px; }
+  .day-sub { font-size: 9px; letter-spacing: 0; }
+  .hours { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+}

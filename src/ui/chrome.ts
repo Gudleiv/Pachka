@@ -28,11 +28,7 @@ export function createHeader(game: string, me: Member | null, onSignOut: (() => 
     }
   }
 
-  return el('header', {
-    style:
-      'display:flex; align-items:center; gap:14px; padding:14px 26px;' +
-      ' border-bottom:1px solid var(--color-divider); background:rgba(14,16,21,0.7)',
-  }, [
+  return el('header', { class: 'topbar' }, [
     el('span', { style: 'font-family:var(--font-heading); font-size:20px; letter-spacing:0.14em; color:var(--color-accent-300)', text: 'ᚠ' }),
     el('span', { style: 'font-family:var(--font-heading); font-size:17px; letter-spacing:0.08em', text: 'ПАЧКА' }),
     el('span', { style: 'width:1px; height:20px; background:var(--color-divider)' }),
@@ -49,11 +45,7 @@ export interface CoverView {
 
 /** Обложка пачки: заголовок и размер пачки слева, арт справа. */
 export function createCover(title: string, coverUrl: string | null): CoverView {
-  const slot = el('div', {
-    style:
-      'position:relative; min-height:200px; border:1px solid var(--color-divider);' +
-      ' border-radius:var(--radius-md); overflow:hidden; background:#0f1217',
-  });
+  const slot = el('div', { class: 'cover-art' });
   if (coverUrl) {
     slot.append(el('img', {
       attrs: { src: coverUrl, alt: `Арт пачки: ${title}` },
@@ -68,11 +60,9 @@ export function createCover(title: string, coverUrl: string | null): CoverView {
 
   const count = el('span', { style: 'font-size:14px; color:#8b93a1' });
 
-  const node = el('section', {
-    style: 'display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:22px; align-items:stretch',
-  }, [
+  const node = el('section', { class: 'cover' }, [
     el('div', { style: 'display:flex; flex-direction:column; gap:12px; justify-content:center' }, [
-      el('h1', { style: 'margin:0; font-size:40px; line-height:1.08; text-wrap:pretty', text: title }),
+      el('h1', { class: 'cover-title', text: title }),
       count,
     ]),
     slot,

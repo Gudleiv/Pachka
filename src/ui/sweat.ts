@@ -3,7 +3,7 @@ import {
   COMBAT, DEATH, FIRE_NOTE, MODES, NO_MAP_NOTE, PORTALS, RAIDS, RESOURCES,
   prefsEqual, sweatBand, sweatOf, type WorldOption, type WorldPrefs,
 } from '../data/valheim';
-import { ACCENT, fogRule, kicker, panelHeading, panelSub, PANEL_STYLE, paintVoteBadge, voteBadge } from './shared';
+import { ACCENT, fogRule, kicker, panelHeading, panelSub, PANEL_CLASS, paintVoteBadge, voteBadge } from './shared';
 
 /** Сколько человек в пачке выбрало каждый вариант; ключ — id варианта. */
 export type VoteTally = Record<string, number>;
@@ -173,14 +173,14 @@ export function createSweatPanel(handlers: SweatHandlers): SweatView {
   });
   const sweatNote = el('span', { style: 'font-size:12px; color:#8b93a1; text-wrap:pretty' });
 
-  const node = el('section', { style: PANEL_STYLE.replace('gap:14px', 'gap:16px') }, [
+  const node = el('section', { class: `${PANEL_CLASS} panel-sweat` }, [
     el('div', {}, [kicker('Второе'), panelHeading('Селектор душноты'), panelSub('Твои пожелания по миру.')]),
     fogRule(),
     el('div', { style: 'display:flex; flex-direction:column; gap:8px' }, [
       el('span', { style: 'font-size:11px; letter-spacing:0.16em; color:#7b8390; text-transform:uppercase', text: 'Готовые режимы сложности' }),
-      el('div', { style: 'display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:10px' }, modeNodes.map((m) => m.btn)),
+      el('div', { style: 'display:grid; grid-template-columns:repeat(auto-fit, minmax(min(260px,100%),1fr)); gap:10px' }, modeNodes.map((m) => m.btn)),
     ]),
-    el('div', { style: 'display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:22px' }, [
+    el('div', { style: 'display:grid; grid-template-columns:repeat(auto-fit, minmax(min(300px,100%),1fr)); gap:22px' }, [
       combat.node, portals.node, raids.node, resources.node, death.node, fire.node, noMap.node,
     ]),
     el('div', {
@@ -188,7 +188,7 @@ export function createSweatPanel(handlers: SweatHandlers): SweatView {
         'display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:16px;' +
         ' border:1px solid var(--color-divider); border-radius:var(--radius-sm); background:rgba(15,18,23,0.7)',
     }, [
-      el('div', { style: 'display:flex; flex-direction:column; gap:6px; min-width:220px; flex:1' }, [
+      el('div', { style: 'display:flex; flex-direction:column; gap:6px; min-width:min(220px,100%); flex:1' }, [
         el('div', { style: 'display:flex; align-items:baseline; gap:8px' }, [
           el('span', { style: 'font-size:11px; letter-spacing:0.16em; color:#7b8390; text-transform:uppercase', text: 'Твоя душнота' }),
           sweatLabel,

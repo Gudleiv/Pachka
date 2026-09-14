@@ -2,10 +2,8 @@ import { el } from '../lib/dom';
 
 export const ACCENT = 'var(--color-accent)';
 
-export const PANEL_STYLE =
-  'display:flex; flex-direction:column; gap:14px; padding:22px;' +
-  ' border:1px solid var(--color-divider); border-radius:var(--radius-md);' +
-  ' background:linear-gradient(180deg, rgba(26,30,38,0.9), rgba(18,21,27,0.9))';
+/** Панель страницы: поля сжимаются на телефоне, поэтому стиль в styles.css. */
+export const PANEL_CLASS = 'panel';
 
 /** «Туманная линия» — разделитель, тающий к краям панели. */
 export function fogRule(): HTMLElement {

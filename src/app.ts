@@ -202,12 +202,10 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
 
   root.append(
     createHeader(snapshot.pack.game, snapshot.me, backend.needsAuth ? () => void backend.signOut().then(() => location.reload()) : null),
-    el('main', {
-      style: 'max-width:1120px; margin:0 auto; padding:26px 26px 60px; display:flex; flex-direction:column; gap:26px',
-    }, [
+    el('main', { class: 'page' }, [
       cover.node,
       heatmap.node,
-      el('h2', { style: 'margin:8px 0 0; font-size:32px; line-height:1.1', text: 'Опрос / Обсуждение' }),
+      el('h2', { class: 'section-title', text: 'Опрос / Обсуждение' }),
       availability.node,
       sweat.node,
       mods.node,
