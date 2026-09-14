@@ -60,13 +60,19 @@ create table if not exists public.world_prefs (
   foreign key (pack_id, user_id) references public.pack_members(pack_id, user_id) on delete cascade
 );
 
+-- Лента обсуждения: моды, правила, договорённости о старте.
 create table if not exists public.mod_suggestions (
   id          uuid primary key default gen_random_uuid(),
   pack_id     uuid not null references public.packs(id)  on delete cascade,
   author_id   uuid not null references auth.users(id)    on delete cascade,
   text        text not null check (char_length(btrim("text")) between 1 and 500),
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  -- Время правки нужно только как флаг «отредактировано»: дату не показываем.
+  edited_at   timestamptz
 );
+
+-- Для баз, созданных до появления правки сообщений.
+alter table public.mod_suggestions add column if not exists edited_at timestamptz;
 
 create table if not exists public.mod_votes (
   suggestion_id uuid not null references public.mod_suggestions(id) on delete cascade,
@@ -115,6 +121,31 @@ stable
 as $$
   select nullif(auth.jwt() -> 'user_metadata' ->> 'avatar_url', '');
 $$;
+
+-- Пометку правки ставит база, а не клиент: запрос мимо интерфейса иначе
+-- переписал бы текст молча. Заодно прибиты поля, которые правке не подлежат.
+create or replace function public.touch_mod_suggestion()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.id         := old.id;
+  new.pack_id    := old.pack_id;
+  new.author_id  := old.author_id;
+  new.created_at := old.created_at;
+  if new.text is distinct from old.text then
+    new.edited_at := now();
+  else
+    new.edited_at := old.edited_at;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists mod_suggestions_touch on public.mod_suggestions;
+create trigger mod_suggestions_touch
+  before update on public.mod_suggestions
+  for each row execute function public.touch_mod_suggestion();
 
 -- ─────────────────────────── RPC ───────────────────────────
 
@@ -192,7 +223,7 @@ grant select                         on public.packs           to authenticated;
 grant select, update, delete         on public.pack_members    to authenticated;
 grant select, insert, update, delete on public.availability    to authenticated;
 grant select, insert, update, delete on public.world_prefs     to authenticated;
-grant select, insert, delete         on public.mod_suggestions to authenticated;
+grant select, insert, update, delete on public.mod_suggestions to authenticated;
 grant select, insert, delete         on public.mod_votes       to authenticated;
 
 -- ─────────────────────────── RLS ───────────────────────────
@@ -246,7 +277,7 @@ create policy prefs_write on public.world_prefs
   using (user_id = auth.uid() and public.is_pack_member(pack_id))
   with check (user_id = auth.uid() and public.is_pack_member(pack_id));
 
--- mod_suggestions: лента общая, автор может убрать своё предложение.
+-- mod_suggestions: лента общая, автор может поправить и убрать своё сообщение.
 drop policy if exists mods_select on public.mod_suggestions;
 create policy mods_select on public.mod_suggestions
   for select to authenticated using (public.is_pack_member(pack_id));
@@ -255,6 +286,12 @@ drop policy if exists mods_insert on public.mod_suggestions;
 create policy mods_insert on public.mod_suggestions
   for insert to authenticated
   with check (author_id = auth.uid() and public.is_pack_member(pack_id));
+
+drop policy if exists mods_update_own on public.mod_suggestions;
+create policy mods_update_own on public.mod_suggestions
+  for update to authenticated
+  using (author_id = auth.uid() and public.is_pack_member(pack_id))
+  with check (author_id = auth.uid());
 
 drop policy if exists mods_delete_own on public.mod_suggestions;
 create policy mods_delete_own on public.mod_suggestions

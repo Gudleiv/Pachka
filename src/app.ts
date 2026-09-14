@@ -7,7 +7,7 @@ import { createCover, createHeader } from './ui/chrome';
 import { createHeatmap } from './ui/heatmap';
 import { createAvailability, DEFAULT_HOURS } from './ui/availability';
 import { createSweatPanel, type VoteTally } from './ui/sweat';
-import { createModsPanel } from './ui/mods';
+import { createDiscussionPanel } from './ui/discussion';
 
 /** Откладывает запись, чтобы протяжка по часам не слала запрос на каждый час. */
 function debounce<A extends unknown[]>(ms: number, fn: (...args: A) => void): (...args: A) => void {
@@ -27,7 +27,7 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
     days: { ...(snapshot.availability[snapshot.me.userId] ?? {}) } as Record<string, number[]>,
     active: days[0]?.key ?? '',
     prefs: { ...(snapshot.prefs[snapshot.me.userId] as WorldPrefs) },
-    mods: [...snapshot.mods],
+    posts: [...snapshot.posts],
   };
 
   const pendingDays = new Map<string, number[]>();
@@ -157,9 +157,9 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
     },
   });
 
-  const mods = createModsPanel({
+  const discussion = createDiscussionPanel(snapshot.me.userId, {
     submit(text) {
-      // Оптимистично показываем предложение, затем подменяем id с сервера.
+      // Оптимистично показываем сообщение, затем подменяем id с сервера.
       const temp = {
         id: `pending-${Date.now()}`,
         authorId: snapshot.me.userId,
@@ -168,26 +168,46 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
         text,
         likes: 1,
         mine: true,
+        edited: false,
       };
-      state.mods = [temp, ...state.mods];
-      mods.paint(state.mods);
-      void backend.addMod(text).then(
+      state.posts = [temp, ...state.posts];
+      discussion.paint(state.posts);
+      void backend.addPost(text).then(
         (saved) => {
-          state.mods = state.mods.map((m) => (m.id === temp.id ? { ...temp, id: saved.id } : m));
-          mods.paint(state.mods);
+          state.posts = state.posts.map((p) => (p.id === temp.id ? { ...temp, id: saved.id } : p));
+          discussion.paint(state.posts);
         },
         () => {
-          state.mods = state.mods.filter((m) => m.id !== temp.id);
-          mods.paint(state.mods);
+          state.posts = state.posts.filter((p) => p.id !== temp.id);
+          discussion.paint(state.posts);
         },
       );
     },
+    edit(id, text) {
+      const before = state.posts;
+      state.posts = state.posts.map((p) => (p.id === id ? { ...p, text, edited: true } : p));
+      discussion.paint(state.posts);
+      void backend.editPost(id, text).catch(() => {
+        // Правка не дошла — возвращаем прежний текст, чтобы лента не врала.
+        state.posts = before;
+        discussion.paint(state.posts);
+      });
+    },
+    remove(id) {
+      const before = state.posts;
+      state.posts = state.posts.filter((p) => p.id !== id);
+      discussion.paint(state.posts);
+      void backend.deletePost(id).catch(() => {
+        state.posts = before;
+        discussion.paint(state.posts);
+      });
+    },
     toggleVote(id, next) {
-      state.mods = state.mods.map((m) =>
-        m.id === id ? { ...m, mine: next, likes: m.likes + (next ? 1 : -1) } : m,
+      state.posts = state.posts.map((p) =>
+        p.id === id ? { ...p, mine: next, likes: p.likes + (next ? 1 : -1) } : p,
       );
-      mods.paint(state.mods);
-      void backend.toggleModVote(id, next);
+      discussion.paint(state.posts);
+      void backend.togglePostVote(id, next);
     },
   });
 
@@ -208,11 +228,11 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
       el('h2', { class: 'section-title', text: 'Опрос / Обсуждение' }),
       availability.node,
       sweat.node,
-      mods.node,
+      discussion.node,
     ]),
   );
 
   repaintAvailability();
   sweat.paint(state.prefs, tallies());
-  mods.paint(state.mods);
+  discussion.paint(state.posts);
 }

@@ -1,6 +1,6 @@
 import { buildDayList } from '../lib/dates';
 import { DEFAULT_PREFS, type WorldPrefs } from '../data/valheim';
-import type { Availability, Member, ModSuggestion } from './types';
+import type { Availability, Member, Post } from './types';
 
 interface SeedMember {
   name: string;
@@ -46,7 +46,7 @@ export interface SeedData {
   members: Member[];
   availability: Record<string, Availability>;
   prefs: Record<string, WorldPrefs>;
-  mods: ModSuggestion[];
+  posts: Post[];
 }
 
 /**
@@ -78,11 +78,12 @@ export function buildSeed(windowStart: string, windowDays: number): SeedData {
     availability[userId] = own;
   });
 
-  const mods: ModSuggestion[] = [
-    { id: 'seed-mod-1', authorId: 'seed-2', authorName: 'Сигурд', authorAvatar: null, text: 'PlantEverything — грядки для всех семян и деревьев, чтобы база не выглядела как вырубка.', likes: 4, mine: false },
-    { id: 'seed-mod-2', authorId: 'seed-3', authorName: 'Хельга', authorAvatar: null, text: 'EquipmentAndQuickSlots: три быстрых слота под еду. Без него вечер уходит в инвентарь.', likes: 3, mine: false },
-    { id: 'seed-mod-3', authorId: 'seed-1', authorName: 'Бьорн', authorAvatar: null, text: 'Только ванилла, никаких модов. Десятый заход — пройдём как есть.', likes: 1, mine: false },
+  const posts: Post[] = [
+    { id: 'seed-post-1', authorId: 'seed-2', authorName: 'Сигурд', authorAvatar: null, text: 'PlantEverything — грядки для всех семян и деревьев, чтобы база не выглядела как вырубка.', likes: 4, mine: false, edited: false },
+    { id: 'seed-post-2', authorId: 'seed-5', authorName: 'Астрид', authorAvatar: null, text: 'Предлагаю первый заход сделать разведкой: ставим базу у болота и расходимся по мелочам.', likes: 2, mine: false, edited: true },
+    { id: 'seed-post-3', authorId: 'seed-3', authorName: 'Хельга', authorAvatar: null, text: 'EquipmentAndQuickSlots: три быстрых слота под еду. Без него вечер уходит в инвентарь.', likes: 3, mine: false, edited: false },
+    { id: 'seed-post-4', authorId: 'seed-1', authorName: 'Бьорн', authorAvatar: null, text: 'Только ванилла, никаких модов. Десятый заход — пройдём как есть.', likes: 1, mine: false, edited: false },
   ];
 
-  return { members, availability, prefs, mods };
+  return { members, availability, prefs, posts };
 }

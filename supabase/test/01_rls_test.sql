@@ -120,3 +120,38 @@ do $$ begin
   raise notice 'ПРОВАЛ: несуществующий вариант боя принят';
 exception when check_violation then raise notice 'OK: неизвестный вариант отбит'; end $$;
 reset role;
+
+\echo '--- 9. правка и удаление своего сообщения ---'
+update auth._ctx set uid=:'alice';
+set role authenticated;
+select 'edited_before:' || coalesce((select edited_at::text from public.mod_suggestions), 'нет');
+update public.mod_suggestions set text='PlantEverything + грядки' where author_id=:'alice';
+select 'alice_edit:' || text || '/' || (edited_at is not null) from public.mod_suggestions;
+-- Автора и пачку правка не переписывает: их возвращает триггер.
+update public.mod_suggestions set author_id=:'bob' where author_id=:'alice';
+select 'author_pinned:' || (author_id = :'alice') from public.mod_suggestions;
+reset role;
+
+update auth._ctx set uid=:'bob';
+set role authenticated;
+do $$ declare n int; begin
+  update public.mod_suggestions set text='теперь моё'
+   where author_id <> '22222222-2222-2222-2222-222222222222';
+  get diagnostics n = row_count;
+  if n > 0 then raise notice 'ПРОВАЛ: bob переписал % чужих сообщений', n;
+  else raise notice 'OK: правка чужого сообщения затронула 0 строк'; end if;
+end $$;
+do $$ declare n int; begin
+  delete from public.mod_suggestions;
+  get diagnostics n = row_count;
+  if n > 0 then raise notice 'ПРОВАЛ: bob удалил % чужих сообщений', n;
+  else raise notice 'OK: удаление чужого сообщения затронуло 0 строк'; end if;
+end $$;
+reset role;
+
+update auth._ctx set uid=:'alice';
+set role authenticated;
+delete from public.mod_suggestions where author_id=:'alice';
+select 'after_delete:' || (select count(*) from public.mod_suggestions) || '/'
+  || (select count(*) from public.mod_votes);
+reset role;
