@@ -65,18 +65,29 @@ export function startLabel(value: string): string | null {
   return `${Number(day)} ${month} ${y} ${hh}:${mm}`;
 }
 
+/** Непрерывный отрезок отмеченных часов; `to` — последний час включительно. */
+export interface HourSpan {
+  from: number;
+  to: number;
+}
+
 /**
- * «18:00–00:00» — непрерывный отрезок отмеченных часов, накрывающий `hour`,
- * или `null`, если этот час не отмечен. В подсказке по ячейке важно, до скольки
- * человек здесь; другие его отрезки за день к этому блоку отношения не имеют.
+ * Отрезок, накрывающий `hour`, или `null`, если этот час не отмечен. В подсказке
+ * по ячейке важно, до скольки человек здесь; другие его отрезки за день к этому
+ * блоку отношения не имеют.
  */
-export function spanLabel(hours: number[], hour: number): string | null {
+export function spanAt(hours: number[], hour: number): HourSpan | null {
   if (!hours.includes(hour)) return null;
   let from = hour;
   let to = hour;
   while (hours.includes(from - 1)) from--;
   while (hours.includes(to + 1)) to++;
-  return `${String(from).padStart(2, '0')}:00–${String((to + 1) % 24).padStart(2, '0')}:00`;
+  return { from, to };
+}
+
+/** «18:00–00:00» — подпись отрезка часов. */
+export function spanLabel(span: HourSpan): string {
+  return `${String(span.from).padStart(2, '0')}:00–${String((span.to + 1) % 24).padStart(2, '0')}:00`;
 }
 
 /** Метка блока тепловой карты: «20:00–22:00». */
