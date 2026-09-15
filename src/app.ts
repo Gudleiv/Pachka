@@ -95,7 +95,7 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
 
   // ——— панели ———
 
-  const cover = createCover(snapshot.pack.title, snapshot.pack.coverUrl);
+  const cover = createCover(snapshot.pack);
 
   const heatmap = createHeatmap(days);
 

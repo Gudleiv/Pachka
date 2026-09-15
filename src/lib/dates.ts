@@ -50,6 +50,21 @@ export function windowLabel(list: DayCell[]): string {
     `${last.date.getDate()} ${MON_FULL[last.date.getMonth()]} ${last.date.getFullYear()}`;
 }
 
+/**
+ * «25 сен 2026 19:00» — момент старта пачки. Значение наивное: и в базе, и
+ * здесь это настенные часы, как день с часами доступности, поэтому разбираем
+ * строку сами, а не через `Date` — иначе браузер сдвинет её на свой пояс.
+ * Ничего не похожего на дату со временем на страницу не пускаем.
+ */
+export function startLabel(value: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(value.trim());
+  if (!m) return null;
+  const [, y, mon, day, hh, mm] = m;
+  const month = MON[Number(mon) - 1];
+  if (!month) return null;
+  return `${Number(day)} ${month} ${y} ${hh}:${mm}`;
+}
+
 /** Метка блока тепловой карты: «20:00–22:00». */
 export function blockLabel(b: number): string {
   return `${String(b * 2).padStart(2, '0')}:00–${String((b * 2 + 2) % 24).padStart(2, '0')}:00`;

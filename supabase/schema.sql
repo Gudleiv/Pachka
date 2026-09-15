@@ -14,12 +14,19 @@ create table if not exists public.packs (
   title         text not null,
   game          text not null,
   cover_url     text,
+  -- Момент старта, без часового пояса: у пачки одно «в семь вечера» на всех,
+  -- как и часы доступности. Пусто — значит ещё не договорились.
+  starts_at     timestamp,
   window_start  date not null,
   window_days   int  not null default 30 check (window_days between 1 and 92),
   -- GUID приглашения: попадает в ссылку, которую кидают в Discord.
   invite_code   uuid not null unique default gen_random_uuid(),
   created_at    timestamptz not null default now()
 );
+
+-- Пачки, заведённые до появления старта: `create table if not exists` выше
+-- колонку в них не добавит.
+alter table public.packs add column if not exists starts_at timestamp;
 
 create table if not exists public.pack_members (
   pack_id       uuid not null references public.packs(id) on delete cascade,
