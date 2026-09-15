@@ -1,6 +1,6 @@
 import type { Backend } from './backend';
 import type { PackSnapshot } from './backend/types';
-import { buildDayList, spanLabel, windowLabel, tzLabel, type DayCell } from './lib/dates';
+import { buildDayList, spanAt, spanLabel, windowLabel, tzLabel, type DayCell } from './lib/dates';
 import { el } from './lib/dom';
 import type { WorldPrefs } from './data/valheim';
 import { createCover, createHeader } from './ui/chrome';
@@ -22,8 +22,9 @@ function debounce<A extends unknown[]>(ms: number, fn: (...args: A) => void): (.
 const PREF_KEYS: (keyof WorldPrefs)[] = ['combat', 'death', 'portals', 'raids', 'resources', 'fire', 'noMap'];
 
 /**
- * Сначала ты, дальше по алфавиту: порядок участников в базе произвольный,
- * а список в подсказке не должен прыгать от ячейки к ячейке.
+ * Голоса: сначала ты, дальше по алфавиту. Порядок участников в базе
+ * произвольный, а список не должен прыгать от варианта к варианту. У часов
+ * порядок свой — по началу отрезка, см. `who()`.
  */
 function byMine(a: TipRow, b: TipRow): number {
   return a.mine === b.mine ? a.name.localeCompare(b.name, 'ru') : a.mine ? -1 : 1;
@@ -78,21 +79,24 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
 
   /**
    * Кто отметил этот блок — для подсказки на ячейке. Рядом с именем не сам блок,
-   * а отрезок, в который он попал: на вопрос «до скольки он тут» два часа
-   * ячейки не отвечают.
+   * а отрезок, в который он попал: на вопрос «до скольки он тут» два часа ячейки
+   * не отвечают.
    */
   function who(block: number, dayIndex: number): TipRow[] {
     const day = days[dayIndex];
     if (!day) return [];
-    const out: TipRow[] = [];
+    const out: (TipRow & { from: number })[] = [];
     for (const m of snapshot.members) {
       const mine = m.userId === snapshot.me.userId;
       const hours = (mine ? state.days : snapshot.availability[m.userId] ?? {})[day.key] ?? [];
-      const span = spanLabel(hours, block * 2) ?? spanLabel(hours, block * 2 + 1);
+      const span = spanAt(hours, block * 2) ?? spanAt(hours, block * 2 + 1);
       if (!span) continue;
-      out.push({ name: m.displayName, avatarUrl: m.avatarUrl, note: span, mine });
+      out.push({ name: m.displayName, avatarUrl: m.avatarUrl, note: spanLabel(span), mine, from: span.from });
     }
-    return out.sort(byMine);
+    // Сначала ты, дальше — кто раньше сел: список читается как расписание.
+    // Имя — только чтобы одинаковые отрезки не менялись местами.
+    return out.sort((x, y) =>
+      x.mine !== y.mine ? (x.mine ? -1 : 1) : x.from - y.from || x.name.localeCompare(y.name, 'ru'));
   }
 
   /** Кто выбрал этот вариант мира — для подсказки на числе голосов. */
