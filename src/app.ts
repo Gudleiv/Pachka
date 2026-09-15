@@ -1,10 +1,10 @@
 import type { Backend } from './backend';
 import type { PackSnapshot } from './backend/types';
-import { buildDayList, windowLabel, tzLabel, type DayCell } from './lib/dates';
+import { buildDayList, spanLabel, windowLabel, tzLabel, type DayCell } from './lib/dates';
 import { el } from './lib/dom';
 import type { WorldPrefs } from './data/valheim';
 import { createCover, createHeader } from './ui/chrome';
-import { createHeatmap } from './ui/heatmap';
+import { createHeatmap, type CellPerson } from './ui/heatmap';
 import { createAvailability, DEFAULT_HOURS } from './ui/availability';
 import { createSweatPanel, type VoteTally } from './ui/sweat';
 import { createDiscussionPanel } from './ui/discussion';
@@ -68,6 +68,28 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
   }
 
   /**
+   * Кто отметил этот блок — для подсказки на ячейке. Рядом с именем не сам блок,
+   * а отрезок, в который он попал: на вопрос «до скольки он тут» два часа
+   * ячейки не отвечают.
+   */
+  function who(block: number, dayIndex: number): CellPerson[] {
+    const day = days[dayIndex];
+    if (!day) return [];
+    const out: CellPerson[] = [];
+    for (const m of snapshot.members) {
+      const mine = m.userId === snapshot.me.userId;
+      const hours = (mine ? state.days : snapshot.availability[m.userId] ?? {})[day.key] ?? [];
+      const span = spanLabel(hours, block * 2) ?? spanLabel(hours, block * 2 + 1);
+      if (!span) continue;
+      out.push({ name: m.displayName, avatarUrl: m.avatarUrl, hours: span, mine });
+    }
+    // Сначала ты, дальше по алфавиту: порядок участников в базе произвольный,
+    // а список не должен прыгать между ячейками.
+    out.sort((a, b) => (a.mine === b.mine ? a.name.localeCompare(b.name, 'ru') : a.mine ? -1 : 1));
+    return out;
+  }
+
+  /**
    * Размер пачки считаем не по списку участников, а по тем, кто отметил себе
    * хотя бы час: вступивший по ссылке и не заполнивший опрос ещё не игрок.
    */
@@ -97,7 +119,7 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
 
   const cover = createCover(snapshot.pack);
 
-  const heatmap = createHeatmap(days);
+  const heatmap = createHeatmap(days, { who });
 
   const availability = createAvailability(days, windowLabel(days), tzLabel(), {
     pickDay(key) {
