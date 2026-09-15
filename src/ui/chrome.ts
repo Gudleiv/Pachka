@@ -1,6 +1,7 @@
 import { button, el } from '../lib/dom';
 import { plural } from '../lib/plural';
-import { tzLabel, tzZone } from '../lib/dates';
+import { startLabel, tzLabel, tzZone } from '../lib/dates';
+import type { PackConfig } from '../data/pack';
 import type { Member } from '../backend/types';
 import { avatar } from './shared';
 
@@ -43,8 +44,8 @@ export interface CoverView {
   paint(ready: number): void;
 }
 
-/** Обложка пачки: заголовок и размер пачки слева, арт справа. */
-export function createCover(title: string, coverUrl: string | null): CoverView {
+/** Обложка пачки: старт, заголовок и размер пачки слева, арт справа. */
+export function createCover({ title, coverUrl, startsAt }: PackConfig): CoverView {
   const slot = el('div', { class: 'cover-art' });
   if (coverUrl) {
     slot.append(el('img', {
@@ -60,13 +61,20 @@ export function createCover(title: string, coverUrl: string | null): CoverView {
 
   const count = el('span', { style: 'font-size:14px; color:#8b93a1' });
 
-  const node = el('section', { class: 'cover' }, [
-    el('div', { style: 'display:flex; flex-direction:column; gap:12px; justify-content:center' }, [
-      el('h1', { class: 'cover-title', text: title }),
-      count,
-    ]),
-    slot,
-  ]);
+  const text = el('div', { style: 'display:flex; flex-direction:column; gap:12px; justify-content:center' });
+  // Старт есть не у всякой пачки: пока не договорились — строки просто нет.
+  const start = startsAt ? startLabel(startsAt) : null;
+  if (start) {
+    text.append(el('span', {
+      style:
+        'font-size:13px; letter-spacing:0.08em; color:var(--color-accent-300);' +
+        ' font-family:var(--font-heading)',
+      text: `Старт ${start}`,
+    }));
+  }
+  text.append(el('h1', { class: 'cover-title', text: title }), count);
+
+  const node = el('section', { class: 'cover' }, [text, slot]);
 
   return {
     node,

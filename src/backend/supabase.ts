@@ -13,6 +13,7 @@ interface PackRow {
   title: string;
   game: string;
   cover_url: string | null;
+  starts_at: string | null;
   window_start: string;
   window_days: number;
 }
@@ -69,6 +70,7 @@ function packFromRow(row: PackRow): PackConfig {
     title: row.title,
     game: row.game,
     coverUrl: row.cover_url,
+    startsAt: row.starts_at,
     windowStart: row.window_start,
     windowDays: row.window_days,
   };
