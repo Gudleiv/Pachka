@@ -32,9 +32,9 @@ export function panelSub(text: string): HTMLElement {
 /** Бейдж с числом голосов пачки; при нуле скрыт. */
 export function voteBadge(): HTMLElement {
   return el('span', {
-    title: 'голосов в пачке',
     style:
       'display:none; margin-left:auto; flex:none; align-items:center; justify-content:center;' +
+      ' cursor:help;' +
       ' min-width:24px; height:22px; padding:0 7px; border-radius:11px;' +
       ' font-family:var(--font-heading); font-size:12px',
   });
@@ -47,6 +47,9 @@ export function paintVoteBadge(node: HTMLElement, votes: number, picked: boolean
   }
   node.style.display = 'inline-flex';
   node.textContent = String(votes);
+  // Родного `title` тут нет — он спорил бы со своей подсказкой; текст остаётся
+  // скринридеру.
+  node.setAttribute('aria-label', `голосов за этот вариант: ${votes}`);
   node.style.background = picked ? 'rgba(200,160,106,0.26)' : 'rgba(255,255,255,0.05)';
   node.style.borderColor = picked ? 'var(--color-accent-600)' : 'var(--color-divider)';
   node.style.border = `1px solid ${picked ? 'var(--color-accent-600)' : 'var(--color-divider)'}`;

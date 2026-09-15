@@ -4,7 +4,8 @@ import { buildDayList, spanLabel, windowLabel, tzLabel, type DayCell } from './l
 import { el } from './lib/dom';
 import type { WorldPrefs } from './data/valheim';
 import { createCover, createHeader } from './ui/chrome';
-import { createHeatmap, type CellPerson } from './ui/heatmap';
+import { createHeatmap } from './ui/heatmap';
+import type { TipRow } from './ui/tooltip';
 import { createAvailability, DEFAULT_HOURS } from './ui/availability';
 import { createSweatPanel, type VoteTally } from './ui/sweat';
 import { createDiscussionPanel } from './ui/discussion';
@@ -19,6 +20,14 @@ function debounce<A extends unknown[]>(ms: number, fn: (...args: A) => void): (.
 }
 
 const PREF_KEYS: (keyof WorldPrefs)[] = ['combat', 'death', 'portals', 'raids', 'resources', 'fire', 'noMap'];
+
+/**
+ * Сначала ты, дальше по алфавиту: порядок участников в базе произвольный,
+ * а список в подсказке не должен прыгать от ячейки к ячейке.
+ */
+function byMine(a: TipRow, b: TipRow): number {
+  return a.mine === b.mine ? a.name.localeCompare(b.name, 'ru') : a.mine ? -1 : 1;
+}
 
 export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnapshot): void {
   const days: DayCell[] = buildDayList(snapshot.pack.windowStart, snapshot.pack.windowDays);
@@ -72,21 +81,30 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
    * а отрезок, в который он попал: на вопрос «до скольки он тут» два часа
    * ячейки не отвечают.
    */
-  function who(block: number, dayIndex: number): CellPerson[] {
+  function who(block: number, dayIndex: number): TipRow[] {
     const day = days[dayIndex];
     if (!day) return [];
-    const out: CellPerson[] = [];
+    const out: TipRow[] = [];
     for (const m of snapshot.members) {
       const mine = m.userId === snapshot.me.userId;
       const hours = (mine ? state.days : snapshot.availability[m.userId] ?? {})[day.key] ?? [];
       const span = spanLabel(hours, block * 2) ?? spanLabel(hours, block * 2 + 1);
       if (!span) continue;
-      out.push({ name: m.displayName, avatarUrl: m.avatarUrl, hours: span, mine });
+      out.push({ name: m.displayName, avatarUrl: m.avatarUrl, note: span, mine });
     }
-    // Сначала ты, дальше по алфавиту: порядок участников в базе произвольный,
-    // а список не должен прыгать между ячейками.
-    out.sort((a, b) => (a.mine === b.mine ? a.name.localeCompare(b.name, 'ru') : a.mine ? -1 : 1));
-    return out;
+    return out.sort(byMine);
+  }
+
+  /** Кто выбрал этот вариант мира — для подсказки на числе голосов. */
+  function voters(key: keyof WorldPrefs, option: string): TipRow[] {
+    const out: TipRow[] = [];
+    for (const m of snapshot.members) {
+      const mine = m.userId === snapshot.me.userId;
+      const prefs = mine ? state.prefs : snapshot.prefs[m.userId];
+      if (!prefs || String(prefs[key]) !== option) continue;
+      out.push({ name: m.displayName, avatarUrl: m.avatarUrl, mine });
+    }
+    return out.sort(byMine);
   }
 
   /**
@@ -172,6 +190,7 @@ export function mountApp(root: HTMLElement, backend: Backend, snapshot: PackSnap
   });
 
   const sweat = createSweatPanel({
+    voters,
     set(patch) {
       state.prefs = { ...state.prefs, ...patch };
       persistPrefs();

@@ -1,15 +1,18 @@
 import { button, el } from '../lib/dom';
 import {
-  COMBAT, DEATH, FIRE_NOTE, MODES, NO_MAP_NOTE, PORTALS, RAIDS, RESOURCES,
+  COMBAT, DEATH, FIRE, MODES, NO_MAP, PORTALS, RAIDS, RESOURCES,
   prefsEqual, sweatBand, sweatOf, type WorldOption, type WorldPrefs,
 } from '../data/valheim';
 import { ACCENT, fogRule, kicker, panelHeading, panelSub, PANEL_CLASS, paintVoteBadge, voteBadge } from './shared';
+import { createTooltip, type TipRow } from './tooltip';
 
 /** Сколько человек в пачке выбрало каждый вариант; ключ — id варианта. */
 export type VoteTally = Record<string, number>;
 
 export interface SweatHandlers {
   set(patch: Partial<WorldPrefs>): void;
+  /** Кто выбрал этот вариант — для подсказки на числе голосов. */
+  voters(key: keyof WorldPrefs, option: string): TipRow[];
 }
 
 export interface SweatView {
@@ -23,6 +26,14 @@ interface OptionNode {
   title: HTMLElement;
   badge: HTMLElement;
   id: string;
+  label: string;
+}
+
+interface Ladder {
+  node: HTMLElement;
+  nodes: OptionNode[];
+  key: keyof WorldPrefs;
+  title: string;
 }
 
 const OPTION_STYLE =
@@ -31,12 +42,13 @@ const OPTION_STYLE =
   ' transition:background 120ms, border-color 120ms';
 
 function ladder<Id extends string>(
+  key: keyof WorldPrefs,
   title: string,
   hint: string,
   options: WorldOption<Id>[],
   titleFont: boolean,
   onPick: (id: Id) => void,
-): { node: HTMLElement; nodes: OptionNode[] } {
+): Ladder {
   const nodes: OptionNode[] = [];
   const list = el('div', { style: 'display:flex; flex-direction:column; gap:6px' });
 
@@ -47,6 +59,8 @@ function ladder<Id extends string>(
       text: o.label,
     });
     const badge = voteBadge();
+    // Метка для подсказки: что за вариант, знает карта ниже.
+    badge.setAttribute('data-vote', '');
     const btn = button({ style: OPTION_STYLE, on: { click: () => onPick(o.id) } }, [
       dot,
       el('span', { style: 'display:flex; flex-direction:column; gap:2px; min-width:0' }, [
@@ -55,7 +69,7 @@ function ladder<Id extends string>(
       ]),
       badge,
     ]);
-    nodes.push({ btn, dot, title: label, badge, id: o.id });
+    nodes.push({ btn, dot, title: label, badge, id: o.id, label: o.label });
     list.append(btn);
   }
 
@@ -66,7 +80,7 @@ function ladder<Id extends string>(
     ]),
     list,
   ]);
-  return { node, nodes };
+  return { node, nodes, key, title };
 }
 
 function paintLadder(nodes: OptionNode[], picked: string, tally: VoteTally): void {
@@ -79,51 +93,6 @@ function paintLadder(nodes: OptionNode[], picked: string, tally: VoteTally): voi
     n.title.style.color = on ? 'var(--color-accent-100)' : '#c3c8d2';
     paintVoteBadge(n.badge, tally[n.id] ?? 0, on);
   }
-}
-
-interface ToggleNode {
-  btn: HTMLButtonElement;
-  track: HTMLElement;
-  knob: HTMLElement;
-  state: HTMLElement;
-  node: HTMLElement;
-}
-
-function toggle(title: string, note: string, onFlip: () => void): ToggleNode {
-  const knob = el('span', {
-    style:
-      'position:absolute; top:2px; width:16px; height:16px; border-radius:50%;' +
-      ' background:var(--color-accent-100); transition:left 140ms',
-  });
-  const track = el('span', {
-    style: 'position:relative; flex:none; width:36px; height:20px; border-radius:10px; transition:background 140ms',
-  }, [knob]);
-  const state = el('span', { style: 'font-size:14px' });
-  const btn = button({ style: OPTION_STYLE, on: { click: onFlip } }, [
-    track,
-    el('span', { style: 'display:flex; flex-direction:column; gap:2px; min-width:0' }, [
-      state,
-      el('span', { style: 'font-size:11px; color:#7b8390', text: note }),
-    ]),
-  ]);
-  const node = el('div', { style: 'display:flex; flex-direction:column; gap:10px' }, [
-    el('div', { style: 'display:flex; align-items:baseline; gap:8px' }, [
-      el('span', { style: 'font-family:var(--font-heading); font-size:15px', text: title }),
-      el('span', { style: 'font-size:11px; color:#7b8390', text: 'модификатор мира' }),
-    ]),
-    btn,
-  ]);
-  return { btn, track, knob, state, node };
-}
-
-function paintToggle(t: ToggleNode, on: boolean, onLabel: string, offLabel: string): void {
-  t.btn.style.background = on ? 'rgba(200,160,106,0.14)' : 'rgba(255,255,255,0.025)';
-  t.btn.style.borderColor = on ? ACCENT : 'var(--color-divider)';
-  t.btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  t.track.style.background = on ? 'var(--color-accent-600)' : '#2c3240';
-  t.knob.style.left = on ? '18px' : '2px';
-  t.state.textContent = on ? onLabel : offLabel;
-  t.state.style.color = on ? 'var(--color-accent-100)' : '#7b8390';
 }
 
 export function createSweatPanel(handlers: SweatHandlers): SweatView {
@@ -157,15 +126,19 @@ export function createSweatPanel(handlers: SweatHandlers): SweatView {
     return { btn, title, mode: m };
   });
 
-  const combat = ladder('Бой', 'сила врагов', COMBAT, false, (id) => handlers.set({ combat: id }));
-  const portals = ladder('Порталы', 'изменяет работу порталов в игре', PORTALS, false, (id) => handlers.set({ portals: id }));
-  const raids = ladder('Частота набегов', 'как часто база под атакой', RAIDS, false, (id) => handlers.set({ raids: id }));
-  const resources = ladder('Количество ресурсов', 'сколько добычи в мире', RESOURCES, true, (id) => handlers.set({ resources: id }));
-  const death = ladder('Плата за смерть', 'что ждет вас после смерти', DEATH, false, (id) => handlers.set({ death: id }));
+  const combat = ladder('combat', 'Бой', 'сила врагов', COMBAT, false, (id) => handlers.set({ combat: id }));
+  const portals = ladder('portals', 'Порталы', 'изменяет работу порталов в игре', PORTALS, false, (id) => handlers.set({ portals: id }));
+  const raids = ladder('raids', 'Частота набегов', 'как часто база под атакой', RAIDS, false, (id) => handlers.set({ raids: id }));
+  const resources = ladder('resources', 'Количество ресурсов', 'сколько добычи в мире', RESOURCES, true, (id) => handlers.set({ resources: id }));
+  const death = ladder('death', 'Плата за смерть', 'что ждет вас после смерти', DEATH, false, (id) => handlers.set({ death: id }));
+  const fire = ladder('fire', 'Огнеопасно', 'модификатор мира', FIRE, false, (id) => handlers.set({ fire: id === 'true' }));
+  const noMap = ladder('noMap', 'Без карты', 'модификатор мира', NO_MAP, false, (id) => handlers.set({ noMap: id === 'true' }));
 
-  let current: WorldPrefs | null = null;
-  const fire = toggle('Огнеопасно', FIRE_NOTE, () => current && handlers.set({ fire: !current.fire }));
-  const noMap = toggle('Без карты', NO_MAP_NOTE, () => current && handlers.set({ noMap: !current.noMap }));
+  // Число голосов само по себе не говорит, кто за вариант, — подсказка говорит.
+  const tipOf = new Map<HTMLElement, { key: keyof WorldPrefs; id: string; head: string }>();
+  for (const l of [combat, portals, raids, resources, death, fire, noMap]) {
+    for (const n of l.nodes) tipOf.set(n.badge, { key: l.key, id: n.id, head: `${l.title} · ${n.label}` });
+  }
 
   const sweatLabel = el('span', { style: 'font-family:var(--font-heading); font-size:15px; color:var(--color-accent-300)' });
   const sweatFill = el('div', {
@@ -199,8 +172,26 @@ export function createSweatPanel(handlers: SweatHandlers): SweatView {
     ]),
   ]);
 
+  const tip = createTooltip(node, '[data-vote]', (badge) => {
+    const at = tipOf.get(badge);
+    const rows = at ? handlers.voters(at.key, at.id) : [];
+    return rows.length ? { head: at!.head, rows } : null;
+  });
+  node.append(tip.node);
+
+  // Касание по числу открывает список — и только его: голос от этого не меняется.
+  for (const badge of tipOf.keys()) {
+    let touched = false;
+    badge.addEventListener('pointerdown', (e) => {
+      touched = e.pointerType === 'touch';
+    });
+    badge.addEventListener('click', (e) => {
+      if (touched) e.stopPropagation();
+      touched = false;
+    });
+  }
+
   function paint(prefs: WorldPrefs, votes: Record<keyof WorldPrefs, VoteTally>): void {
-    current = prefs;
     for (const m of modeNodes) {
       const on = prefsEqual(prefs, m.mode.set);
       m.btn.style.background = on ? 'rgba(200,160,106,0.14)' : 'rgba(255,255,255,0.025)';
@@ -214,14 +205,16 @@ export function createSweatPanel(handlers: SweatHandlers): SweatView {
     paintLadder(raids.nodes, prefs.raids, votes.raids);
     paintLadder(resources.nodes, prefs.resources, votes.resources);
     paintLadder(death.nodes, prefs.death, votes.death);
-    paintToggle(fire, prefs.fire, 'Включена', 'Выключена');
-    paintToggle(noMap, prefs.noMap, 'Включено', 'Выключено');
+    paintLadder(fire.nodes, String(prefs.fire), votes.fire);
+    paintLadder(noMap.nodes, String(prefs.noMap), votes.noMap);
 
     const sweat = sweatOf(prefs);
     const band = sweatBand(sweat);
     sweatLabel.textContent = band.label;
     sweatNote.textContent = band.note;
     sweatFill.style.width = `${Math.round(8 + sweat * 92)}%`;
+    // Голоса под открытой подсказкой только что пересчитались.
+    tip.refresh();
   }
 
   return { node, paint };
