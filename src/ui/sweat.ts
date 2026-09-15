@@ -3,7 +3,7 @@ import {
   COMBAT, DEATH, FIRE, MODES, NO_MAP, PORTALS, RAIDS, RESOURCES,
   prefsEqual, sweatBand, sweatOf, type WorldOption, type WorldPrefs,
 } from '../data/valheim';
-import { ACCENT, fogRule, kicker, panelHeading, panelSub, PANEL_CLASS, paintVoteBadge, voteBadge } from './shared';
+import { achBadge, ACCENT, fogRule, kicker, panelHeading, panelSub, PANEL_CLASS, paintVoteBadge, voteBadge } from './shared';
 import { createTooltip, type TipRow } from './tooltip';
 
 /** Сколько человек в пачке выбрало каждый вариант; ключ — id варианта. */
@@ -63,9 +63,19 @@ function ladder<Id extends string>(
     badge.setAttribute('data-vote', '');
     const btn = button({ style: OPTION_STYLE, on: { click: () => onPick(o.id) } }, [
       dot,
-      el('span', { style: 'display:flex; flex-direction:column; gap:2px; min-width:0' }, [
-        label,
+      el('span', { style: 'display:flex; flex-direction:column; gap:4px; min-width:0' }, [
+        // Бейдж переносится под название: в узкой колонке он рядом не помещается.
+        el('span', { style: 'display:flex; align-items:center; flex-wrap:wrap; gap:6px' }, [
+          label,
+          o.ach && achBadge('Доп. ачивка'),
+        ]),
         el('span', { style: 'font-size:11px; color:#7b8390', text: o.note }),
+        // Условие ачивки — под пунктом: в бейдж такой текст не влезает.
+        o.ach?.note &&
+          el('span', { style: 'font-size:11px; color:#7b8390; text-wrap:pretty' }, [
+            o.ach.name && el('span', { style: 'color:var(--color-accent-300)', text: `«${o.ach.name}». ` }),
+            o.ach.note,
+          ]),
       ]),
       badge,
     ]);
@@ -98,18 +108,8 @@ function paintLadder(nodes: OptionNode[], picked: string, tally: VoteTally): voi
 export function createSweatPanel(handlers: SweatHandlers): SweatView {
   const modeNodes = MODES.map((m) => {
     const title = el('span', { style: 'font-family:var(--font-heading); font-size:16px', text: m.label });
-    const ach = el(
-      'span',
-      {
-        title: 'В этом режиме открываются дополнительные достижения',
-        style:
-          `display:${m.ach ? 'inline-flex' : 'none'}; align-items:center; gap:5px; margin-left:auto;` +
-          ' padding:3px 8px; border-radius:11px; border:1px solid var(--color-accent-600);' +
-          ' background:rgba(200,160,106,0.18); color:var(--color-accent-100); font-size:10px;' +
-          ' letter-spacing:0.08em; text-transform:uppercase',
-      },
-      [el('span', { style: 'font-size:11px', text: '☖' }), 'Доп. ачивки'],
-    );
+    const ach = m.ach ? achBadge('Доп. ачивки') : null;
+    if (ach) ach.style.marginLeft = 'auto';
     const btn = button(
       {
         style:
