@@ -14,6 +14,8 @@
   --color-accent-900: #2e2519;
   --moss: #7d9963;
   --blood: #a8452f;
+  /* Осветлённая кровь: мелкий текст выходных на тёмном фоне. */
+  --blood-300: #cb7a63;
 
   --font-heading: 'Cinzel', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
