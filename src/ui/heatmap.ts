@@ -1,8 +1,11 @@
-import { blockLabel, MON, type DayCell } from '../lib/dates';
+import { blockLabel, shortDate, WD, type DayCell } from '../lib/dates';
 import { el } from '../lib/dom';
 import { fogRule, PANEL_CLASS } from './shared';
 
 const ROW_STYLE = 'display:grid; grid-template-columns:78px repeat(var(--cols), minmax(20px,1fr)); gap:3px; min-width:790px';
+
+/** Выходные в шапке — красноватым: иначе они неотличимы от «тут кто-то есть». */
+const WEEKEND = 'var(--blood-300)';
 
 /** Вечерние блоки подписаны контрастнее — по ним чаще всего и читают карту. */
 function labelWeight(b: number): boolean {
@@ -30,16 +33,26 @@ export function createHeatmap(days: DayCell[]): HeatmapView {
   });
   matrix.style.setProperty('--cols', String(days.length));
 
+  // Шапка в две строки: день недели и число. Одними числами карта не читалась —
+  // серое и светлое можно было принять за «тут кто-то отметился», а не за выходной.
+  const dows = el('div', { style: ROW_STYLE }, [el('span')]);
   const head = el('div', { style: ROW_STYLE }, [el('span')]);
   for (const d of days) {
+    const weekend = d.dow >= 5;
+    dows.append(
+      el('span', {
+        style: `font-size:9px; letter-spacing:0.04em; text-align:center; color:${weekend ? WEEKEND : '#6d7481'}`,
+        text: WD[d.dow],
+      }),
+    );
     head.append(
       el('span', {
-        style: `font-size:9px; text-align:center; color:${d.dow >= 5 ? '#c3c8d2' : '#6d7481'}`,
+        style: `font-size:9px; text-align:center; color:${weekend ? WEEKEND : '#9aa2b0'}`,
         text: String(d.date.getDate()),
       }),
     );
   }
-  matrix.append(head);
+  matrix.append(dows, head);
 
   for (let b = 0; b < 12; b++) {
     const row = el('div', { style: ROW_STYLE }, [
@@ -103,7 +116,7 @@ export function createHeatmap(days: DayCell[]): HeatmapView {
         cell.style.color = k > 0.5 ? '#1a1207' : n > 0 ? 'var(--color-accent-100)' : 'transparent';
         cell.style.boxShadow = mine[b]![i]! ? 'inset 0 0 0 1px rgba(125,153,99,0.9)' : 'none';
         const d = days[i]!;
-        cell.title = `${d.date.getDate()} ${MON[d.date.getMonth()]}, ${blockLabel(b)} — ${n} из ${total}`;
+        cell.title = `${shortDate(d.date, d.dow)}, ${blockLabel(b)} — ${n} из ${total}`;
       }
     }
   }
