@@ -51,6 +51,24 @@ export const RESOURCES: WorldOption<ResourcesId>[] = [
 export const FIRE_NOTE = 'Дерево может загореться, а огонь может выйти из Пепельных земель и охватить весь мир.';
 export const NO_MAP_NOTE = 'У вас не будет ни карты, ни мини-карты. Так играть сложнее, чем задумано.';
 
+/**
+ * Булевы модификаторы устроены как остальные лесенки — двумя вариантами.
+ * Переключателем они были компактнее, но у переключателя негде показать,
+ * сколько человек за каждый вариант. Id — `String(boolean)`: так же они
+ * попадают в подсчёт голосов.
+ */
+export type BoolId = 'true' | 'false';
+
+export const FIRE: WorldOption<BoolId>[] = [
+  { id: 'false', label: 'Выключено', note: 'Огонь ведёт себя, как в обычном режиме.', w: 0 },
+  { id: 'true', label: 'Включено', note: FIRE_NOTE, w: 1 },
+];
+
+export const NO_MAP: WorldOption<BoolId>[] = [
+  { id: 'false', label: 'Выключено', note: 'Карта и мини-карта на месте, как в обычном режиме.', w: 0 },
+  { id: 'true', label: 'Включено', note: NO_MAP_NOTE, w: 1 },
+];
+
 /** Пожелания одного участника по миру — семь параметров селектора душноты. */
 export interface WorldPrefs {
   combat: CombatId;

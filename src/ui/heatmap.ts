@@ -1,6 +1,7 @@
 import { blockLabel, shortDate, WD, type DayCell } from '../lib/dates';
 import { el } from '../lib/dom';
 import { fogRule, PANEL_CLASS } from './shared';
+import { createTooltip, type TipRow } from './tooltip';
 
 const ROW_STYLE = 'display:grid; grid-template-columns:78px repeat(var(--cols), minmax(20px,1fr)); gap:3px; min-width:790px';
 
@@ -16,6 +17,15 @@ function fill(k: number): string {
   return `rgba(200,160,106,${(0.08 + k * 0.72).toFixed(3)})`;
 }
 
+export interface HeatmapDeps {
+  /**
+   * Кто отмечен в этом блоке. Спрашиваем на наведении, а не на отрисовке:
+   * заранее это 360 списков, из которых смотрят один. В `note` — отрезок,
+   * в который попал блок: «18:00–00:00».
+   */
+  who(block: number, dayIndex: number): TipRow[];
+}
+
 export interface HeatmapView {
   node: HTMLElement;
   /**
@@ -26,7 +36,7 @@ export interface HeatmapView {
   paint(counts: number[][], mine: boolean[][], total: number): void;
 }
 
-export function createHeatmap(days: DayCell[]): HeatmapView {
+export function createHeatmap(days: DayCell[], deps: HeatmapDeps): HeatmapView {
   const cells: HTMLElement[][] = [];
   const matrix = el('div', {
     style: 'display:flex; flex-direction:column; gap:3px; overflow-x:auto; padding-bottom:4px',
@@ -67,6 +77,7 @@ export function createHeatmap(days: DayCell[]): HeatmapView {
     for (let i = 0; i < days.length; i++) {
       const cell = el('span', {
         style: 'display:grid; place-items:center; height:17px; border-radius:2px; font-size:9px',
+        attrs: { 'data-b': String(b), 'data-i': String(i) },
       });
       rowCells.push(cell);
       row.append(cell);
@@ -93,6 +104,15 @@ export function createHeatmap(days: DayCell[]): HeatmapView {
     ]),
   ]);
 
+  const tip = createTooltip(matrix, '[data-b]', (cell) => {
+    const b = Number(cell.dataset['b']);
+    const i = Number(cell.dataset['i']);
+    const day = days[i];
+    const people = day ? deps.who(b, i) : [];
+    if (!day || !people.length) return null;
+    return { head: `${shortDate(day.date, day.dow)} · ${blockLabel(b)}`, rows: people };
+  });
+
   const node = el('section', { class: PANEL_CLASS }, [
     el('div', { style: 'display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap' }, [
       el('div', { style: 'margin-right:auto' }, [
@@ -103,6 +123,7 @@ export function createHeatmap(days: DayCell[]): HeatmapView {
     fogRule(),
     matrix,
     legend,
+    tip.node,
   ]);
 
   function paint(counts: number[][], mine: boolean[][], total: number): void {
@@ -116,9 +137,14 @@ export function createHeatmap(days: DayCell[]): HeatmapView {
         cell.style.color = k > 0.5 ? '#1a1207' : n > 0 ? 'var(--color-accent-100)' : 'transparent';
         cell.style.boxShadow = mine[b]![i]! ? 'inset 0 0 0 1px rgba(125,153,99,0.9)' : 'none';
         const d = days[i]!;
-        cell.title = `${shortDate(d.date, d.dow)}, ${blockLabel(b)} — ${n} из ${total}`;
+        // Не `title`: родная подсказка перебивала бы свою. Скринридеру текст
+        // при этом остаётся.
+        cell.setAttribute('aria-label', `${shortDate(d.date, d.dow)}, ${blockLabel(b)} — ${n} из ${total}`);
       }
     }
+    // Открытая подсказка (на телефоне она переживает правку часов) не должна
+    // показывать состав, которого уже нет.
+    tip.refresh();
   }
 
   return { node, paint };

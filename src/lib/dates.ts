@@ -65,6 +65,20 @@ export function startLabel(value: string): string | null {
   return `${Number(day)} ${month} ${y} ${hh}:${mm}`;
 }
 
+/**
+ * «18:00–00:00» — непрерывный отрезок отмеченных часов, накрывающий `hour`,
+ * или `null`, если этот час не отмечен. В подсказке по ячейке важно, до скольки
+ * человек здесь; другие его отрезки за день к этому блоку отношения не имеют.
+ */
+export function spanLabel(hours: number[], hour: number): string | null {
+  if (!hours.includes(hour)) return null;
+  let from = hour;
+  let to = hour;
+  while (hours.includes(from - 1)) from--;
+  while (hours.includes(to + 1)) to++;
+  return `${String(from).padStart(2, '0')}:00–${String((to + 1) % 24).padStart(2, '0')}:00`;
+}
+
 /** Метка блока тепловой карты: «20:00–22:00». */
 export function blockLabel(b: number): string {
   return `${String(b * 2).padStart(2, '0')}:00–${String((b * 2 + 2) % 24).padStart(2, '0')}:00`;
