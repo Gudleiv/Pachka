@@ -63,7 +63,7 @@ create table if not exists public.world_prefs (
   user_id     uuid not null,
   combat      text not null default 'normal' check (combat    in ('easy','normal','hard','vhard')),
   death       text not null default 'normal' check (death     in ('easy','normal','hard')),
-  portals     text not null default 'normal' check (portals   in ('items','afterfirst','normal','boss')),
+  portals     text not null default 'normal' check (portals   in ('items','afterfirst','normal','boss','none')),
   raids       text not null default 'normal' check (raids     in ('less','normal','more')),
   resources   text not null default 'x15'    check (resources in ('x2','x15','x1')),
   fire        boolean not null default false,
@@ -72,6 +72,12 @@ create table if not exists public.world_prefs (
   primary key (pack_id, user_id),
   foreign key (pack_id, user_id) references public.pack_members(pack_id, user_id) on delete cascade
 );
+
+-- Вариант «Без порталов» появился позже: в базах, заведённых раньше, ограничение
+-- выше уже создано и такого значения не пропустит.
+alter table public.world_prefs drop constraint if exists world_prefs_portals_check;
+alter table public.world_prefs add constraint world_prefs_portals_check
+  check (portals in ('items','afterfirst','normal','boss','none'));
 
 -- Лента обсуждения: моды, правила, договорённости о старте.
 create table if not exists public.mod_suggestions (

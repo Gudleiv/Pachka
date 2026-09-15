@@ -3,7 +3,7 @@
 
 export type CombatId = 'easy' | 'normal' | 'hard' | 'vhard';
 export type DeathId = 'easy' | 'normal' | 'hard';
-export type PortalsId = 'items' | 'afterfirst' | 'normal' | 'boss';
+export type PortalsId = 'items' | 'afterfirst' | 'normal' | 'boss' | 'none';
 export type RaidsId = 'less' | 'normal' | 'more';
 export type ResourcesId = 'x2' | 'x15' | 'x1';
 
@@ -44,7 +44,8 @@ export const PORTALS: WorldOption<PortalsId>[] = [
   // Кастомная договорённость пачки: в игре такого пункта нет, это соглашение, а не настройка сервера.
   { id: 'afterfirst', label: 'Перемещение предметов после первого путешествия', note: 'За первым металлом/ценностью едем сами, потом порталы открыты (условная договоренность).', w: 0.3 },
   { id: 'normal', label: 'Обычная игра', note: 'Порталы работают, как в обычном режиме: металлы через них не проходят.', w: 0.65 },
-  { id: 'boss', label: 'Без порталов с боссами', note: 'Вы не сможете использовать порталы или выходить из подземелий боссов, пока босс активен.', w: 1 },
+  { id: 'boss', label: 'Без порталов с боссами', note: 'Вы не сможете использовать порталы или выходить из подземелий боссов, пока босс активен.', w: 0.85 },
+  { id: 'none', label: 'Без порталов', note: 'Вы не сможете перемещаться по миру с помощью порталов.', w: 1 },
 ];
 
 export const RAIDS: WorldOption<RaidsId>[] = [

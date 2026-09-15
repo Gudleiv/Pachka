@@ -119,6 +119,13 @@ do $$ begin
     select id, '11111111-1111-1111-1111-111111111111', 'impossible' from public.packs;
   raise notice 'ПРОВАЛ: несуществующий вариант боя принят';
 exception when check_violation then raise notice 'OK: неизвестный вариант отбит'; end $$;
+-- «Без порталов» добавили позже остальных вариантов — ограничение должно его пускать.
+do $$ begin
+  insert into public.world_prefs (pack_id,user_id,portals)
+    select id, '11111111-1111-1111-1111-111111111111', 'none' from public.packs
+    on conflict (pack_id,user_id) do update set portals = 'none';
+  raise notice 'OK: вариант «Без порталов» принят';
+exception when check_violation then raise notice 'ПРОВАЛ: вариант «Без порталов» отбит'; end $$;
 reset role;
 
 \echo '--- 9. правка и удаление своего сообщения ---'
