@@ -29,6 +29,25 @@ export function panelSub(text: string): HTMLElement {
   return el('span', { style: 'font-size:13px; color:#8b93a1', text });
 }
 
+/**
+ * Бейдж «доп. ачивки»: на этом режиме или варианте мира открываются
+ * достижения, которых иначе не получить.
+ */
+export function achBadge(text: string): HTMLElement {
+  return el(
+    'span',
+    {
+      title: 'В этом режиме открываются дополнительные достижения',
+      style:
+        'display:inline-flex; align-items:center; gap:5px; flex:none;' +
+        ' padding:3px 8px; border-radius:11px; border:1px solid var(--color-accent-600);' +
+        ' background:rgba(200,160,106,0.18); color:var(--color-accent-100); font-size:10px;' +
+        ' letter-spacing:0.08em; text-transform:uppercase',
+    },
+    [el('span', { style: 'font-size:11px', text: '☖' }), text],
+  );
+}
+
 /** Бейдж с числом голосов пачки; при нуле скрыт. */
 export function voteBadge(): HTMLElement {
   return el('span', {

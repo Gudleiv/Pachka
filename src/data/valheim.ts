@@ -7,18 +7,29 @@ export type PortalsId = 'items' | 'afterfirst' | 'normal' | 'boss';
 export type RaidsId = 'less' | 'normal' | 'more';
 export type ResourcesId = 'x2' | 'x15' | 'x1';
 
+/**
+ * Достижение, которое открывается только на этом варианте мира. Название и
+ * условие знаем не про все — тогда бейдж просто помечает вариант.
+ */
+export interface OptionAch {
+  name?: string;
+  note?: string;
+}
+
 export interface WorldOption<Id extends string> {
   id: Id;
   label: string;
   note: string;
   /** Нормированный вес варианта для расчёта душноты (0…1). */
   w: number;
+  /** Вариант открывает дополнительные достижения. */
+  ach?: OptionAch;
 }
 
 export const COMBAT: WorldOption<CombatId>[] = [
   { id: 'easy', label: 'Легко', note: 'Враги слабее, чем в обычном режиме.', w: 0.15 },
   { id: 'normal', label: 'Обычная игра', note: 'Враги ведут себя, как в обычном режиме.', w: 0.45 },
-  { id: 'hard', label: 'Сложно', note: 'Враги сильнее, чем в обычном режиме.', w: 0.75 },
+  { id: 'hard', label: 'Сложно', note: 'Враги сильнее, чем в обычном режиме.', w: 0.75, ach: {} },
   { id: 'vhard', label: 'Ужасно сложно', note: 'Враги намного сильнее, чем в обычном режиме.', w: 1 },
 ];
 
@@ -39,7 +50,7 @@ export const PORTALS: WorldOption<PortalsId>[] = [
 export const RAIDS: WorldOption<RaidsId>[] = [
   { id: 'less', label: 'Меньше', note: 'Набеги случаются реже, чем в обычном режиме.', w: 0 },
   { id: 'normal', label: 'Обычная игра', note: 'Набеги случаются, как в обычном режиме.', w: 0.5 },
-  { id: 'more', label: 'Больше', note: 'Набеги случаются чаще, чем в обычном режиме.', w: 1 },
+  { id: 'more', label: 'Больше', note: 'Набеги случаются чаще, чем в обычном режиме.', w: 1, ach: {} },
 ];
 
 export const RESOURCES: WorldOption<ResourcesId>[] = [
@@ -66,7 +77,19 @@ export const FIRE: WorldOption<BoolId>[] = [
 
 export const NO_MAP: WorldOption<BoolId>[] = [
   { id: 'false', label: 'Выключено', note: 'Карта и мини-карта на месте, как в обычном режиме.', w: 0 },
-  { id: 'true', label: 'Включено', note: NO_MAP_NOTE, w: 1 },
+  {
+    id: 'true',
+    label: 'Включено',
+    note: NO_MAP_NOTE,
+    w: 1,
+    ach: {
+      name: 'Первопроходец',
+      note:
+        'Проплывите далеко во всех четырёх направлениях. Достигните нужного расстояния' +
+        ' к северному, южному, восточному и западному краям мира. Все четыре направления' +
+        ' можно выполнить независимо.',
+    },
+  },
 ];
 
 /** Пожелания одного участника по миру — семь параметров селектора душноты. */
